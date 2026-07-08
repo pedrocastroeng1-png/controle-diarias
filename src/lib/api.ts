@@ -1,0 +1,185 @@
+import { supabase } from './supabase';
+import { Usuario, Obra, Funcao, Funcionario, Presenca } from './types';
+
+export const api = {
+  // Usuarios
+  login: async (usuario: string, senha: string): Promise<Usuario | null> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, usuario, perfil')
+      .eq('usuario', usuario)
+      .eq('senha', senha)
+      .eq('ativo', true)
+      .single();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return data;
+  },
+
+  // Obras
+  getObras: async (): Promise<Obra[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('obras').select('*').eq('ativo', true).order('nome');
+    if (error) throw error;
+    return data;
+  },
+  createObra: async (obra: Omit<Obra, 'id'>): Promise<Obra> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('obras').insert([obra]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  updateObra: async (id: string, obra: Partial<Obra>): Promise<Obra> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('obras').update(obra).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  deleteObra: async (id: string): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase.from('obras').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+  },
+
+  // Funcoes
+  getFuncoes: async (): Promise<Funcao[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('funcoes').select('*').eq('ativo', true).order('nome');
+    if (error) throw error;
+    return data;
+  },
+  createFuncao: async (funcao: Omit<Funcao, 'id'>): Promise<Funcao> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('funcoes').insert([funcao]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  updateFuncao: async (id: string, funcao: Partial<Funcao>): Promise<Funcao> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('funcoes').update(funcao).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  deleteFuncao: async (id: string): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase.from('funcoes').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+  },
+
+  // Funcionarios
+  getFuncionarios: async (): Promise<Funcionario[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase
+      .from('funcionarios')
+      .select(`*, funcao:funcoes(*), obra:obras(*)`)
+      .eq('ativo', true)
+      .order('nome');
+    if (error) throw error;
+    return data as any;
+  },
+  createFuncionario: async (funcionario: Omit<Funcionario, 'id' | 'funcao' | 'obra'>): Promise<Funcionario> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('funcionarios').insert([funcionario]).select().single();
+    if (error) throw error;
+    return data as any;
+  },
+  updateFuncionario: async (id: string, funcionario: Partial<Funcionario>): Promise<Funcionario> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.from('funcionarios').update(funcionario).eq('id', id).select().single();
+    if (error) throw error;
+    return data as any;
+  },
+  deleteFuncionario: async (id: string): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase.from('funcionarios').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+  },
+  getFuncionariosPorObra: async (obra_id: string): Promise<Funcionario[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase
+      .from('funcionarios')
+      .select(`*, funcao:funcoes(*), obra:obras(*)`)
+      .eq('obra_id', obra_id)
+      .eq('ativo', true)
+      .order('nome');
+    if (error) throw error;
+    return data as any;
+  },
+
+  // Presencas
+  getPresencas: async (data: string, obra_id?: string): Promise<Presenca[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    let query = supabase
+      .from('presencas')
+      .select(`*, funcionario:funcionarios!inner(*, funcao:funcoes(*), obra:obras(*))`)
+      .eq('data', data)
+      .eq('ativo', true);
+      
+    if (obra_id) {
+      query = query.eq('obra_id', obra_id);
+    }
+    
+    const { data: presencas, error } = await query;
+    if (error) throw error;
+    return presencas as any;
+  },
+  salvarPresencas: async (presencas: Array<any>): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase
+      .from('presencas')
+      .upsert(presencas, { onConflict: 'funcionario_id,data' });
+    if (error) throw error;
+  },
+
+  getRelatorio: async (dataInicial: string, dataFinal: string, obraId?: string): Promise<any[]> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    let query = supabase
+      .from('vw_relatorio_presencas')
+      .select('*')
+      .gte('data', dataInicial)
+      .lte('data', dataFinal)
+      .order('data', { ascending: false });
+
+    if (obraId) {
+      query = query.eq('obra_id', obraId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as any;
+  },
+
+  getDashboardStats: async (hoje: string) => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    
+    const { count: obrasCount } = await supabase.from('obras').select('*', { count: 'exact', head: true }).eq('ativo', true);
+    const { count: funcionariosCount } = await supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('ativo', true);
+    
+    const { data: presencasHoje, error } = await supabase.from('vw_relatorio_presencas').select('presente, valor_diaria').eq('data', hoje);
+    if (error) throw error;
+
+    let presentesHoje = 0;
+    let faltasHoje = 0;
+    let valorTotalHoje = 0;
+
+    presencasHoje?.forEach(p => {
+      if (p.presente) {
+        presentesHoje++;
+        valorTotalHoje += Number(p.valor_diaria || 0);
+      } else {
+        faltasHoje++;
+      }
+    });
+
+    return {
+      totalObras: obrasCount || 0,
+      totalFuncionarios: funcionariosCount || 0,
+      presentesHoje,
+      faltasHoje,
+      valorTotalHoje
+    };
+  }
+};
