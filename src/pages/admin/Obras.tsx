@@ -5,6 +5,9 @@ import { Edit2, Trash2, Plus } from 'lucide-react';
 
 export default function Obras() {
   const [obras, setObras] = useState<Obra[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [nome, setNome] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
@@ -14,28 +17,51 @@ export default function Obras() {
   }, []);
 
   async function loadObras() {
-    const data = await api.getObras();
-    setObras(data);
+    setLoading(true);
+    setErro('');
+    try {
+      const data = await api.getObras();
+      setObras(data);
+    } catch (error) {
+      setErro('Ocorreu um erro ao carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nome.trim()) return;
-
-    if (editId) {
-      await api.updateObra(editId, { nome });
-      setEditId(null);
-    } else {
-      await api.createObra({ nome });
+    if (!nome.trim() || saving) return;
+    setSaving(true);
+    setErro('');
+    try {
+      if (editId) {
+        await api.updateObra(editId, { nome });
+        setEditId(null);
+      } else {
+        await api.createObra({ nome });
+      }
+      setNome('');
+      await loadObras();
+    } catch (error) {
+      setErro('Ocorreu um erro ao salvar os dados.');
+    } finally {
+      setSaving(false);
     }
-    setNome('');
-    loadObras();
   }
 
   async function handleDelete(id: string) {
     if (confirm('Tem certeza que deseja excluir esta obra?')) {
-      await api.deleteObra(id);
-      loadObras();
+      setLoading(true);
+      setErro('');
+      try {
+        await api.deleteObra(id);
+        await loadObras();
+      } catch (error) {
+        setErro('Ocorreu um erro ao excluir.');
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -68,6 +94,7 @@ export default function Obras() {
         </div>
       </div>
       
+      {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 mb-8">
         <form onSubmit={handleSubmit} className="flex gap-4 items-end">
           <div className="flex-1">
@@ -85,6 +112,7 @@ export default function Obras() {
           </div>
           <button
             type="submit"
+            disabled={saving}
             className="flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors h-[42px]"
           >
             {editId ? 'Salvar' : <><Plus className="h-4 w-4 mr-2" /> Salvar</>}
@@ -114,7 +142,10 @@ export default function Obras() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredObras.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td></tr>
+            ) : (
+              filteredObras.length === 0 ? (
               <tr>
                  <td colSpan={2} className="px-6 py-8 text-center text-sm text-gray-500">
                    Nenhuma obra encontrada.
@@ -134,7 +165,8 @@ export default function Obras() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ))
+            )}
           </tbody>
         </table>
       </div>

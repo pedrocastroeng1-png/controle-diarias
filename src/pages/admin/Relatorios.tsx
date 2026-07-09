@@ -20,6 +20,7 @@ export default function Relatorios() {
   
   const [relatorio, setRelatorio] = useState<Presenca[]>([]);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -28,8 +29,12 @@ export default function Relatorios() {
   }, []);
 
   async function loadObras() {
-    const data = await api.getObras();
-    setObras(data);
+    try {
+      const data = await api.getObras();
+      setObras(data);
+    } catch (e) {
+      setErro('Ocorreu um erro ao carregar as obras.');
+    }
   }
 
   async function loadRelatorio(inicio: string, fim: string, obra: string) {
@@ -42,7 +47,7 @@ export default function Relatorios() {
       );
       setRelatorio(data);
     } catch (error) {
-      console.error(error);
+      setErro('Ocorreu um erro ao carregar o relatório.');
     } finally {
       setLoading(false);
     }
@@ -50,30 +55,31 @@ export default function Relatorios() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    loadRelatorio(dataInicial, dataFinal, obraId);
+    const obraSelecionada = obras.find(o => o.id === obraId)?.nome || '';
+    loadRelatorio(dataInicial, dataFinal, obraSelecionada);
   }
 
   const agruparPorFuncionario = () => {
     const agrupado: Record<string, { nome: string, funcao: string, obra: string, dias: number, faltas: number, valorDiaria: number, total: number }> = {};
     
     relatorio.forEach((p: any) => {
-      const fId = p.funcionario_id;
+      const fId = p.funcionario_id || p.funcionario_nome || p.funcionario;
       if (fId) {
         if (!agrupado[fId]) {
           agrupado[fId] = {
-            nome: p.funcionario_nome || '',
-            funcao: p.funcao_nome || '',
-            obra: p.obra_nome || '',
+            nome: p.funcionario_nome || p.funcionario || '',
+            funcao: p.funcao_nome || p.funcao || '',
+            obra: p.obra_nome || p.obra || '',
             dias: 0,
             faltas: 0,
             valorDiaria: Number(p.valor_diaria) || 0,
             total: 0
           };
         }
-        if (p.presente) {
+        if (p.status === 'PRESENTE') {
           agrupado[fId].dias += 1;
           agrupado[fId].total += agrupado[fId].valorDiaria;
-        } else {
+        } else if (p.status === 'FALTOU') {
           agrupado[fId].faltas += 1;
         }
       }
@@ -176,9 +182,10 @@ export default function Relatorios() {
     setLoading(true);
     let dailyData: any[] = [];
     try {
-      dailyData = await api.getRelatorio(targetDate, targetDate, obraId || undefined);
+      const obraSelecionada = obras.find(o => o.id === obraId)?.nome || undefined;
+      dailyData = await api.getRelatorio(targetDate, targetDate, obraSelecionada);
     } catch (e) {
-      console.error(e);
+      alert('Ocorreu um erro ao gerar o relatório diário.');
     } finally {
       setLoading(false);
     }
@@ -202,12 +209,12 @@ export default function Relatorios() {
     let totalFaltas = 0;
 
     dailyData.forEach(p => {
-      const obraName = p.obra_nome || 'Sem Obra';
+      const obraName = p.obra_nome || p.obra || 'Sem Obra';
       if (!obrasGroup[obraName]) obrasGroup[obraName] = [];
       obrasGroup[obraName].push(p);
       
-      if (p.presente) totalPresentes++;
-      else totalFaltas++;
+      if (p.status === 'PRESENTE') totalPresentes++;
+      else if (p.status === 'FALTOU') totalFaltas++;
     });
 
     let currentY = 55;
@@ -226,20 +233,20 @@ export default function Relatorios() {
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       
-      const funcs = obrasGroup[obraName].sort((a, b) => (a.funcionario_nome || '').localeCompare(b.funcionario_nome || ''));
+      const funcs = obrasGroup[obraName].sort((a, b) => (a.funcionario_nome || a.funcionario || '').localeCompare(b.funcionario_nome || b.funcionario || ''));
       funcs.forEach(f => {
         if (currentY > 270) {
           doc.addPage();
           currentY = 20;
         }
-        const status = f.presente ? '✅' : '❌';
+        const status = f.status === 'PRESENTE' ? '✅' : '❌';
         // jsPDF doesn't support emojis well in standard fonts, so we'll use text or a simple symbol
         // For '✅' and '❌' we can just use '[P]' and '[F]' or text, but user requested '✅' and '❌'.
         // Wait, standard jsPDF won't render emojis properly, it renders ??.
         // I will use text Presente / Falta if emoji fails, but let's try to pass the emoji and see. Or maybe better:
         // For PDF, let's use standard strings: 'P' and 'F' or full text. The request showed: '✅ Alef Santos Rodrigues'
         // I'll try to just include it, if it breaks it breaks, but usually jsPDF with autoTable works with some characters. Wait, we are writing directly with text().
-        doc.text(`${f.presente ? '✅' : '❌'} ${f.funcionario_nome}`, 14, currentY);
+        doc.text(`${f.status === 'PRESENTE' ? '✅' : '❌'} ${f.funcionario_nome || f.funcionario}`, 14, currentY);
         currentY += 7;
       });
       currentY += 5;
@@ -308,7 +315,7 @@ export default function Relatorios() {
 
     // Worksheets por Funcionário
     const presencasPorFunc = relatorio.reduce((acc: any, p: any) => {
-      const fId = p.funcionario_id;
+      const fId = p.funcionario_id || p.funcionario_nome || p.funcionario;
       if (fId) {
         if (!acc[fId]) acc[fId] = [];
         acc[fId].push(p);
@@ -335,14 +342,14 @@ export default function Relatorios() {
       ws.addRow(['Data', 'Status']);
       ws.getRow(6).font = { bold: true };
 
-      const presencas = presencasPorFunc[relatorio.find(p => p.funcionario_nome === f.nome)?.funcionario_id] || [];
+      const presencas = presencasPorFunc[relatorio.find(p => (p.funcionario_nome || p.funcionario) === f.nome)?.funcionario_id || f.nome] || [];
       const presencasOrdenadas = [...presencas].sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
       presencasOrdenadas.forEach((p: any) => {
-        if (p.funcionario_nome === f.nome) { // double check
+        if ((p.funcionario_nome || p.funcionario) === f.nome) { // double check
           ws.addRow([
             format(parseISO(p.data), 'dd/MM/yyyy'),
-            p.presente ? '✅ Presente' : '❌ Faltou'
+            p.status === 'PRESENTE' ? '✅ Presente' : '❌ Faltou'
           ]);
         }
       });
@@ -485,6 +492,14 @@ export default function Relatorios() {
             </p>
           </div>
 
+            {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
+        <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 print:hidden">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Debug Relatório</h3>
+              <pre className="bg-gray-100 p-4 rounded text-xs overflow-auto max-h-60">
+                {JSON.stringify(relatorio, null, 2)}
+              </pre>
+            </div>
+            
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

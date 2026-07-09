@@ -38,12 +38,10 @@ export interface Presenca {
 
 export interface RelatorioPresenca {
   id: string;
-  funcionario_id: string;
-  obra_id: string;
   data: string;
-  presente: boolean;
-  funcionario_nome: string;
-  funcao_nome: string;
+  status: string;
+  funcionario: string;
+  funcao: string;
   valor_diaria: number;
-  obra_nome: string;
+  obra: string;
 }

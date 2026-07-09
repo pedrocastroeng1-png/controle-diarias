@@ -10,6 +10,7 @@ export default function PresencaPage() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [erro, setErro] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [jaRegistradoHoje, setJaRegistradoHoje] = useState(false);
 
@@ -85,8 +86,7 @@ export default function PresencaPage() {
       await api.salvarPresencas(registrosToSave);
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error(error);
-      alert('Erro ao salvar presença');
+      setErro('Ocorreu um erro ao salvar os dados.');
     } finally {
       setSaving(false);
     }
@@ -99,6 +99,7 @@ export default function PresencaPage() {
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
+      {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 mb-8 text-center sm:text-left">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Lista de Presença</h2>
         <p className="text-sm text-gray-500">

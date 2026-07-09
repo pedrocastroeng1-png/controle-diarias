@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUsuario(JSON.parse(storedUser));
       } catch (e) {
-        console.error(e);
+        /* suppress console error */
       }
     }
     setLoading(false);
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     } catch (e) {
-      console.error('Login error', e);
+      /* suppress login console error */
       return false;
     } finally {
       setLoading(false);

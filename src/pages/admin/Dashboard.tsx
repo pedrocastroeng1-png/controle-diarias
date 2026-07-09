@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [presentesHoje, setPresentesHoje] = useState(0);
   const [faltasHoje, setFaltasHoje] = useState(0);
   const [valorTotalHoje, setValorTotalHoje] = useState(0);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -22,7 +23,7 @@ export default function Dashboard() {
         setFaltasHoje(stats.faltasHoje);
         setValorTotalHoje(stats.valorTotalHoje);
       } catch (error) {
-        console.error("Erro ao carregar dados do dashboard", error);
+        setErro('Ocorreu um erro ao carregar os dados.');
       }
     }
     loadData();
@@ -39,6 +40,7 @@ export default function Dashboard() {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+      {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {cards.map((card) => {
           const Icon = card.icon;

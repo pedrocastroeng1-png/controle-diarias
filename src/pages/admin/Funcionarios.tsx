@@ -7,6 +7,9 @@ export default function Funcionarios() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [funcoes, setFuncoes] = useState<Funcao[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [nome, setNome] = useState('');
@@ -19,36 +22,59 @@ export default function Funcionarios() {
   }, []);
 
   async function loadData() {
-    const [funcs, funcsData, obsData] = await Promise.all([
-      api.getFuncionarios(),
-      api.getFuncoes(),
-      api.getObras()
-    ]);
-    setFuncionarios(funcs);
-    setFuncoes(funcsData);
-    setObras(obsData);
+    setLoading(true);
+    setErro('');
+    try {
+      const [funcs, funcsData, obsData] = await Promise.all([
+        api.getFuncionarios(),
+        api.getFuncoes(),
+        api.getObras()
+      ]);
+      setFuncionarios(funcs);
+      setFuncoes(funcsData);
+      setObras(obsData);
+    } catch (error) {
+      setErro('Ocorreu um erro ao carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nome.trim() || !funcaoId || !obraId) return;
-
-    if (editId) {
-      await api.updateFuncionario(editId, { nome, funcao_id: funcaoId, obra_id: obraId });
-      setEditId(null);
-    } else {
-      await api.createFuncionario({ nome, funcao_id: funcaoId, obra_id: obraId });
+    if (!nome.trim() || !funcaoId || !obraId || saving) return;
+    setSaving(true);
+    setErro('');
+    try {
+      if (editId) {
+        await api.updateFuncionario(editId, { nome, funcao_id: funcaoId, obra_id: obraId });
+        setEditId(null);
+      } else {
+        await api.createFuncionario({ nome, funcao_id: funcaoId, obra_id: obraId });
+      }
+      setNome('');
+      setFuncaoId('');
+      setObraId('');
+      await loadData();
+    } catch (error) {
+      setErro('Ocorreu um erro ao salvar os dados.');
+    } finally {
+      setSaving(false);
     }
-    setNome('');
-    setFuncaoId('');
-    setObraId('');
-    loadData();
   }
 
   async function handleDelete(id: string) {
     if (confirm('Tem certeza que deseja excluir este funcionário?')) {
-      await api.deleteFuncionario(id);
-      loadData();
+      setLoading(true);
+      setErro('');
+      try {
+        await api.deleteFuncionario(id);
+        await loadData();
+      } catch (error) {
+        setErro('Ocorreu um erro ao excluir.');
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -83,6 +109,7 @@ export default function Funcionarios() {
         </div>
       </div>
       
+      {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 mb-8">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div className="col-span-1 md:col-span-2">
@@ -143,7 +170,8 @@ export default function Funcionarios() {
               </button>
             )}
             <button
-              type="submit"
+            type="submit"
+            disabled={saving}
               className="flex items-center justify-center px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors h-[42px]"
             >
               {editId ? 'Salvar' : <><Plus className="h-4 w-4 mr-2" /> Salvar</>}
@@ -172,7 +200,10 @@ export default function Funcionarios() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredFuncionarios.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td></tr>
+            ) : (
+              filteredFuncionarios.length === 0 ? (
                 <tr>
                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
                      Nenhum funcionário encontrado.
@@ -198,8 +229,9 @@ export default function Funcionarios() {
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              ))
+            )}
+          </tbody>
           </table>
         </div>
       </div>

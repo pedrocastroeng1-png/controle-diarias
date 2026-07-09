@@ -8,37 +8,60 @@ export default function Funcoes() {
   const [nome, setNome] = useState('');
   const [valorDiaria, setValorDiaria] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     loadFuncoes();
   }, []);
 
   async function loadFuncoes() {
-    const data = await api.getFuncoes();
-    setFuncoes(data);
+    setLoading(true);
+    setErro('');
+    try {
+      const data = await api.getFuncoes();
+      setFuncoes(data);
+    } catch (error) {
+      setErro('Ocorreu um erro ao carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nome.trim() || !valorDiaria) return;
-
-    const valor = parseFloat(valorDiaria.replace(',', '.'));
-    
-    if (editId) {
-      await api.updateFuncao(editId, { nome, valor_diaria: valor });
-      setEditId(null);
-    } else {
-      await api.createFuncao({ nome, valor_diaria: valor });
+    if (!nome.trim() || saving) return;
+    setSaving(true);
+    setErro('');
+    try {
+      if (editId) {
+        await api.updateFuncao(editId, { nome, valor_diaria: Number(valorDiaria) });
+        setEditId(null);
+      } else {
+        await api.createFuncao({ nome, valor_diaria: Number(valorDiaria) });
+      }
+      setNome('');
+      await loadFuncoes();
+    } catch (error) {
+      setErro('Ocorreu um erro ao salvar os dados.');
+    } finally {
+      setSaving(false);
     }
-    setNome('');
-    setValorDiaria('');
-    loadFuncoes();
   }
 
   async function handleDelete(id: string) {
     if (confirm('Tem certeza que deseja excluir esta função?')) {
-      await api.deleteFuncao(id);
-      loadFuncoes();
+      setLoading(true);
+      setErro('');
+      try {
+        await api.deleteFuncao(id);
+        await loadFuncoes();
+      } catch (error) {
+        setErro('Ocorreu um erro ao excluir.');
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -52,6 +75,7 @@ export default function Funcoes() {
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Funções</h2>
       
+      {erro && (<div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg">{erro}</div>)}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 mb-8">
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1 w-full">
@@ -86,6 +110,7 @@ export default function Funcoes() {
           </div>
           <button
             type="submit"
+            disabled={saving}
             className="w-full sm:w-auto flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors h-[42px]"
           >
             {editId ? 'Salvar' : <><Plus className="h-4 w-4 mr-2" /> Salvar</>}
@@ -118,7 +143,10 @@ export default function Funcoes() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {funcoes.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={10} className="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td></tr>
+            ) : (
+              funcoes.length === 0 ? (
               <tr>
                  <td colSpan={3} className="px-6 py-8 text-center text-sm text-gray-500">
                    Nenhuma função cadastrada.
@@ -141,7 +169,8 @@ export default function Funcoes() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ))
+            )}
           </tbody>
         </table>
       </div>

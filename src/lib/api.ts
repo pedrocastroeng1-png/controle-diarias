@@ -13,8 +13,7 @@ export const api = {
       .eq('ativo', true)
       .single();
     if (error) {
-      console.error(error);
-      return null;
+      throw error;
     }
     return data;
   },
@@ -148,11 +147,14 @@ export const api = {
       query = query.lte('data', dataFinal);
     }
     if (obraId) {
-      query = query.eq('obra_id', obraId);
+      // Obras are filtered by name since the view has 'obra' column
+      query = query.eq('obra', obraId);
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data as any;
   },
 
@@ -162,7 +164,7 @@ export const api = {
     const { count: obrasCount } = await supabase.from('obras').select('*', { count: 'exact', head: true }).eq('ativo', true);
     const { count: funcionariosCount } = await supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('ativo', true);
     
-    const { data: presencasHoje, error } = await supabase.from('vw_relatorio_presencas').select('presente, valor_diaria').eq('data', hoje);
+    const { data: presencasHoje, error } = await supabase.from('vw_relatorio_presencas').select('status, valor_diaria').eq('data', hoje);
     if (error) throw error;
 
     let presentesHoje = 0;
@@ -170,7 +172,7 @@ export const api = {
     let valorTotalHoje = 0;
 
     presencasHoje?.forEach(p => {
-      if (p.presente) {
+      if (p.status === 'PRESENTE') {
         presentesHoje++;
         valorTotalHoje += Number(p.valor_diaria || 0);
       } else {
