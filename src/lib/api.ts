@@ -134,15 +134,19 @@ export const api = {
     if (error) throw error;
   },
 
-  getRelatorio: async (dataInicial: string, dataFinal: string, obraId?: string): Promise<any[]> => {
+  getRelatorio: async (dataInicial?: string, dataFinal?: string, obraId?: string): Promise<any[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
     let query = supabase
       .from('vw_relatorio_presencas')
       .select('*')
-      .gte('data', dataInicial)
-      .lte('data', dataFinal)
       .order('data', { ascending: false });
 
+    if (dataInicial) {
+      query = query.gte('data', dataInicial);
+    }
+    if (dataFinal) {
+      query = query.lte('data', dataFinal);
+    }
     if (obraId) {
       query = query.eq('obra_id', obraId);
     }
