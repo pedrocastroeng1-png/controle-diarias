@@ -21,6 +21,7 @@ export function AdminLayout() {
     { name: 'Obras', path: '/admin/obras', icon: HardHat },
     { name: 'Funções', path: '/admin/funcoes', icon: Briefcase },
     { name: 'Funcionários', path: '/admin/funcionarios', icon: Users },
+    { name: 'Presença', path: '/admin/presenca', icon: ClipboardCheck },
     { name: 'Relatórios', path: '/admin/relatorios', icon: FileText },
   ];
 

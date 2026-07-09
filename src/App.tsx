@@ -30,6 +30,7 @@ function App() {
             <Route path="obras" element={<Obras />} />
             <Route path="funcoes" element={<Funcoes />} />
             <Route path="funcionarios" element={<Funcionarios />} />
+            <Route path="presenca" element={<PresencaPage />} />
             <Route path="relatorios" element={<Relatorios />} />
           </Route>
 

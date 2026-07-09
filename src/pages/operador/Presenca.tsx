@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Funcionario } from '../../lib/types';
 import { format } from 'date-fns';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function PresencaPage() {
+  const { usuario } = useAuth();
+  const isAdmin = usuario?.perfil === 'ADMIN';
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -15,10 +18,11 @@ export default function PresencaPage() {
   const [jaRegistradoHoje, setJaRegistradoHoje] = useState(false);
 
   const hoje = format(new Date(), 'yyyy-MM-dd');
+  const [selectedDate, setSelectedDate] = useState(hoje);
 
   useEffect(() => {
     loadFuncionariosEPresencas();
-  }, []);
+  }, [selectedDate]);
 
   async function loadFuncionariosEPresencas() {
     setLoading(true);
@@ -27,10 +31,10 @@ export default function PresencaPage() {
       const funcs = await api.getFuncionarios();
       setFuncionarios(funcs);
 
-      const presencasData = await api.getPresencas(hoje);
+      const presencasData = await api.getPresencas(selectedDate);
       
       if (presencasData.length > 0) {
-        setJaRegistradoHoje(true);
+        setJaRegistradoHoje(!isAdmin);
       } else {
         setJaRegistradoHoje(false);
       }
@@ -51,7 +55,7 @@ export default function PresencaPage() {
 
       setPresencas(presencasMap);
     } catch (error) {
-      console.error(error);
+      setErro('Ocorreu um erro ao carregar os dados.');
     } finally {
       setLoading(false);
     }
@@ -78,7 +82,7 @@ export default function PresencaPage() {
     const registrosToSave = funcionarios.map(f => ({
       funcionario_id: f.id,
       obra_id: f.obra_id,
-      data: hoje,
+      data: selectedDate,
       presente: presencas[f.id] || false
     }));
 
@@ -103,7 +107,20 @@ export default function PresencaPage() {
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6 mb-8 text-center sm:text-left">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Lista de Presença</h2>
         <p className="text-sm text-gray-500">
-          Data atual: <strong>{format(new Date(), 'dd/MM/yyyy')}</strong>
+          {isAdmin ? (
+            <div className="mt-2 flex items-center justify-center sm:justify-start gap-2">
+              <label htmlFor="date" className="text-sm font-medium text-gray-700">Data:</label>
+              <input 
+                type="date" 
+                id="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+          ) : (
+            <>Data atual: <strong>{format(new Date(), 'dd/MM/yyyy')}</strong></>
+          )}
         </p>
       </div>
 
@@ -120,7 +137,7 @@ export default function PresencaPage() {
                   <span className="text-xl mr-3">⚠️</span>
                   <div>
                     <h4 className="font-bold">Atenção</h4>
-                    <p className="text-sm">A presença de hoje já foi registrada.</p>
+                    <p className="text-sm">A presença já foi registrada.</p>
                   </div>
                 </div>
               )}

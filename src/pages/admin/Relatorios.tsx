@@ -111,6 +111,7 @@ export default function Relatorios() {
   };
 
   const handleExportPDF = () => {
+    try {
     const doc = new jsPDF();
     const obraNome = obras.find(o => o.id === obraId)?.nome || 'Todas';
     const periodStr = dataInicial && dataFinal 
@@ -173,6 +174,9 @@ export default function Relatorios() {
     }
 
     doc.save(`${getFileNameBase()}.pdf`);
+    } catch (e) {
+      setErro('Ocorreu um erro ao gerar o PDF.');
+    }
   };
 
   const handleExportDailyPDF = async () => {
@@ -185,7 +189,7 @@ export default function Relatorios() {
       const obraSelecionada = obras.find(o => o.id === obraId)?.nome || undefined;
       dailyData = await api.getRelatorio(targetDate, targetDate, obraSelecionada);
     } catch (e) {
-      alert('Ocorreu um erro ao gerar o relatório diário.');
+      setErro('Ocorreu um erro ao gerar o relatório diário.');
     } finally {
       setLoading(false);
     }
@@ -246,7 +250,7 @@ export default function Relatorios() {
         // I will use text Presente / Falta if emoji fails, but let's try to pass the emoji and see. Or maybe better:
         // For PDF, let's use standard strings: 'P' and 'F' or full text. The request showed: '✅ Alef Santos Rodrigues'
         // I'll try to just include it, if it breaks it breaks, but usually jsPDF with autoTable works with some characters. Wait, we are writing directly with text().
-        doc.text(`${f.status === 'PRESENTE' ? '✅' : '❌'} ${f.funcionario_nome || f.funcionario}`, 14, currentY);
+        doc.text(`[${f.status === 'PRESENTE' ? ' P ' : ' F '}] ${f.funcionario_nome || f.funcionario}`, 14, currentY);
         currentY += 7;
       });
       currentY += 5;
@@ -274,6 +278,7 @@ export default function Relatorios() {
   };
 
   const handleExportExcel = async () => {
+    try {
     const workbook = new ExcelJS.Workbook();
     
     // Worksheet 1: Resumo
@@ -364,6 +369,9 @@ export default function Relatorios() {
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `${getFileNameBase()}.xlsx`);
+    } catch (e) {
+      setErro('Ocorreu um erro ao exportar o Excel.');
+    }
   };
 
   const handlePrint = () => {
