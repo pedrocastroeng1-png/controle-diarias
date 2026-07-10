@@ -3,6 +3,7 @@ import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import logo from '../../assets/logo.png';
 
 export function AdminLayout() {
   const { usuario, logout } = useAuth();
@@ -30,7 +31,7 @@ export function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 gap-3">
-          <img src="/logo.png" alt="Logo" className="w-[44px] h-[44px] object-contain" />
+          <img src={logo} alt="Logo" className="w-[44px] h-[44px] object-contain" />
           <h1 className="text-lg font-bold text-gray-900 leading-tight">Controle de Diárias</h1>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
@@ -74,7 +75,7 @@ export function AdminLayout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6 gap-3 md:hidden">
-           <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+           <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
            <h1 className="text-xl font-bold text-gray-900 flex-1">Controle de Diárias</h1>
            <button onClick={logout} className="text-gray-500 hover:text-red-600">
              <LogOut className="h-6 w-6" />
@@ -107,7 +108,7 @@ export function OperadorLayout() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center gap-3">
-                <img src="/logo.png" alt="Logo" className="w-[44px] h-[44px] object-contain" />
+                <img src={logo} alt="Logo" className="w-[44px] h-[44px] object-contain" />
                 <h1 className="text-lg font-bold text-gray-900 leading-tight hidden sm:block">Controle de Diárias</h1>
               </div>
               <div className="ml-6 flex space-x-8">

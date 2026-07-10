@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '../../assets/logo.png';
 
 export default function Login() {
   const [usuario, setUsuario] = useState('');
@@ -37,7 +38,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex items-center justify-center mb-6">
-          <img src="/logo.png" alt="Controle de Diárias Logo" className="w-24 h-24 object-contain" />
+          <img src={logo} alt="Controle de Diárias Logo" className="w-24 h-24 object-contain" />
         </div>
         <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
           Controle de Diárias
