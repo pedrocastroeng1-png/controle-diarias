@@ -284,11 +284,11 @@ export default function PresencaPage() {
       )}
 
       {!loading && funcionarios.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 sm:relative sm:bg-transparent sm:border-0 sm:p-0 z-10">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 sm:relative sm:bg-transparent sm:border-0 sm:p-0 z-10 flex gap-3">
           <button
             onClick={handleSalvarClick}
             disabled={saving || jaRegistradoHoje}
-            className={`w-full flex items-center justify-center px-6 py-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white focus:outline-none transition-colors ${
+            className={`flex-1 flex items-center justify-center px-6 py-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white focus:outline-none transition-colors ${
               savedSuccess 
                 ? 'bg-green-600 hover:bg-green-700' 
                 : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-70 disabled:bg-gray-400'
@@ -296,6 +296,17 @@ export default function PresencaPage() {
           >
             {saving ? 'Salvando...' : savedSuccess ? 'Presença Salva!' : jaRegistradoHoje ? 'Já Registrado' : 'Salvar Presença'}
           </button>
+          
+          {(jaRegistradoHoje || savedSuccess) && (
+            <button
+              onClick={handleShareWhatsApp}
+              className="flex items-center justify-center px-6 py-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none transition-colors"
+              title="Compartilhar no WhatsApp"
+            >
+              <span>🟢</span> 
+              <span className="hidden sm:inline ml-2">WhatsApp</span>
+            </button>
+          )}
         </div>
       )}
 
