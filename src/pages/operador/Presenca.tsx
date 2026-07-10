@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Funcionario } from '../../lib/types';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function PresencaPage() {
@@ -27,10 +27,19 @@ export default function PresencaPage() {
   async function loadFuncionariosEPresencas() {
     setLoading(true);
     setSavedSuccess(false);
-    try {
-      const funcs = await api.getFuncionarios();
-      setFuncionarios(funcs);
+    setErro('');
 
+    let funcs: Funcionario[] = [];
+    try {
+      funcs = await api.getFuncionarios();
+      setFuncionarios(funcs);
+    } catch (error) {
+      setErro('Ocorreu um erro ao carregar a lista de funcionários.');
+      setLoading(false);
+      return;
+    }
+
+    try {
       const presencasData = await api.getPresencas(selectedDate);
       
       if (presencasData.length > 0) {
@@ -55,7 +64,13 @@ export default function PresencaPage() {
 
       setPresencas(presencasMap);
     } catch (error) {
-      setErro('Ocorreu um erro ao carregar os dados.');
+      // Ignore presence load error, initialize with false
+      const presencasMap: Record<string, boolean> = {};
+      funcs.forEach(f => {
+        presencasMap[f.id] = false;
+      });
+      setPresencas(presencasMap);
+      setJaRegistradoHoje(false);
     } finally {
       setLoading(false);
     }
@@ -99,6 +114,104 @@ export default function PresencaPage() {
   const handleSuccessOk = () => {
     setShowSuccessDialog(false);
     loadFuncionariosEPresencas();
+  };
+
+  const handleShareWhatsApp = () => {
+    try {
+      let totalPresentes = 0;
+      let totalFaltas = 0;
+      let totalFuncionarios = funcionarios.length;
+
+      // Group by Obra
+      const grouped: Record<string, { presentes: string[], faltas: string[], totalFuncs: number }> = {};
+
+      // Ensure consistent sorting for employees inside the groups
+      const sortedFuncionarios = [...funcionarios].sort((a, b) => a.nome.localeCompare(b.nome));
+
+      sortedFuncionarios.forEach(f => {
+        const obraName = f.obra?.nome || 'Sem Obra';
+        if (!grouped[obraName]) {
+          grouped[obraName] = { presentes: [], faltas: [], totalFuncs: 0 };
+        }
+        
+        grouped[obraName].totalFuncs++;
+        
+        if (presencas[f.id]) {
+          grouped[obraName].presentes.push(f.nome);
+          totalPresentes++;
+        } else {
+          grouped[obraName].faltas.push(f.nome);
+          totalFaltas++;
+        }
+      });
+
+      // Format Date
+      const [ano, mes, dia] = selectedDate.split('-');
+      const dataObj = new Date(Number(ano), Number(mes) - 1, Number(dia));
+      const dataFormatada = format(dataObj, 'dd/MM/yyyy');
+      const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      const diaSemana = diasSemana[dataObj.getDay()];
+
+      const agora = new Date();
+      const horaFormatada = format(agora, 'HH:mm');
+      const hora = agora.getHours();
+
+      let saudacao = '🌙 Boa noite!';
+      if (hora < 12) saudacao = '☀️ Bom dia!';
+      else if (hora < 18) saudacao = '🌤 Boa tarde!';
+
+      let message = `${saudacao}\nSegue abaixo o controle de diárias referente ao dia de hoje.\n\n`;
+      message += `📋 *CONTROLE DE DIÁRIAS*\n📅 *${diaSemana}, ${dataFormatada}*\n══════════════════════════════\n\n`;
+
+      // Sort obras alphabetically
+      const sortedObras = Object.keys(grouped).sort();
+
+      sortedObras.forEach(obra => {
+        const group = grouped[obra];
+        if (group.totalFuncs === 0) return;
+
+        message += `🏗 *OBRA: ${obra}*\n`;
+        message += `👷 Funcionários: ${group.totalFuncs}\n`;
+        message += `✅ Presentes: ${group.presentes.length}\n`;
+        message += `❌ Faltaram: ${group.faltas.length}\n`;
+        message += `──────────────────────────────\n`;
+        
+        group.presentes.forEach(nome => {
+          message += `✅ ${nome}\n`;
+        });
+        
+        group.faltas.forEach(nome => {
+          message += `❌ ${nome}\n`;
+        });
+        
+        message += `\n══════════════════════════════\n\n`;
+      });
+
+      const percPresentes = totalFuncionarios > 0 ? Math.round((totalPresentes / totalFuncionarios) * 100) : 0;
+      const percFaltas = totalFuncionarios > 0 ? Math.round((totalFaltas / totalFuncionarios) * 100) : 0;
+
+      message += `📊 *RESUMO GERAL*\n`;
+      message += `👷 Total de Funcionários: ${totalFuncionarios}\n`;
+      message += `✅ Presentes: ${totalPresentes} (${percPresentes}%)\n`;
+      message += `❌ Faltaram: ${totalFaltas} (${percFaltas}%)\n`;
+      message += `══════════════════════════════\n\n`;
+      
+      const userName = usuario?.usuario || 'Usuário';
+      message += `🕒 Registrado às: ${horaFormatada}\n`;
+      message += `👤 Operador: ${userName}\n\n`;
+      
+      message += `📲 Gerado automaticamente pelo sistema\n*Controle de Diárias*`;
+
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+      
+      const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow) {
+        setErro('Não foi possível abrir o WhatsApp. Seu dispositivo não suporta compartilhamento via WhatsApp.');
+      }
+    } catch (err) {
+      setErro('Não foi possível abrir o WhatsApp.');
+    }
   };
 
   return (
@@ -213,14 +326,22 @@ export default function PresencaPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl text-center">
             <div className="text-5xl mb-4">✅</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Sucesso</h3>
-            <p className="text-gray-600 mb-6">Presença registrada com sucesso.</p>
-            <button 
-              onClick={handleSuccessOk}
-              className="w-full px-4 py-3 font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
-            >
-              OK
-            </button>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Presença registrada com sucesso!</h3>
+            <p className="text-gray-600 mb-6">A presença foi registrada com sucesso.<br/>O que deseja fazer agora?</p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleSuccessOk}
+                className="w-full px-4 py-3 font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <span>✅</span> Fechar
+              </button>
+              <button 
+                onClick={handleShareWhatsApp}
+                className="w-full px-4 py-3 font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <span>🟢</span> Compartilhar no WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       )}

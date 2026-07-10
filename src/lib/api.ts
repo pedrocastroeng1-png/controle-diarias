@@ -114,8 +114,7 @@ export const api = {
     let query = supabase
       .from('presencas')
       .select(`*, funcionario:funcionarios!inner(*, funcao:funcoes(*), obra:obras(*))`)
-      .eq('data', data)
-      .eq('ativo', true);
+      .eq('data', data);
       
     if (obra_id) {
       query = query.eq('obra_id', obra_id);
