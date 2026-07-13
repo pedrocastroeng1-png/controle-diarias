@@ -15,11 +15,13 @@ import Funcoes from './pages/admin/Funcoes';
 import Funcionarios from './pages/admin/Funcionarios';
 import Relatorios from './pages/admin/Relatorios';
 import PresencaPage from './pages/operador/Presenca';
+import { PwaUpdateModal } from './components/PwaUpdateModal';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PwaUpdateModal />
         <Routes>
           <Route path="/login" element={<Login />} />
           

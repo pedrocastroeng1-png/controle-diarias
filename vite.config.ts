@@ -1,3 +1,4 @@
+import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -5,7 +6,74 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      VitePWA({
+        registerType: 'prompt',
+        manifest: {
+          short_name: "Diárias",
+          name: "Controle de Diárias",
+          icons: [
+            {
+              src: "/icons/icon-72x72.png",
+              type: "image/png",
+              sizes: "72x72"
+            },
+            {
+              src: "/icons/icon-96x96.png",
+              type: "image/png",
+              sizes: "96x96"
+            },
+            {
+              src: "/icons/icon-128x128.png",
+              type: "image/png",
+              sizes: "128x128"
+            },
+            {
+              src: "/icons/icon-144x144.png",
+              type: "image/png",
+              sizes: "144x144"
+            },
+            {
+              src: "/icons/icon-152x152.png",
+              type: "image/png",
+              sizes: "152x152"
+            },
+            {
+              src: "/icons/icon-180x180.png",
+              type: "image/png",
+              sizes: "180x180"
+            },
+            {
+              src: "/icons/icon-192x192.png",
+              type: "image/png",
+              sizes: "192x192"
+            },
+            {
+              src: "/icons/icon-384x384.png",
+              type: "image/png",
+              sizes: "384x384"
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              type: "image/png",
+              sizes: "512x512"
+            }
+          ],
+          start_url: "/",
+          background_color: "#FFFFFF",
+          theme_color: "#2563EB",
+          display: "standalone"
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          sourcemap: true,
+          cleanupOutdatedCaches: true,
+          maximumFileSizeToCacheInBytes: 5000000
+        }
+      })
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

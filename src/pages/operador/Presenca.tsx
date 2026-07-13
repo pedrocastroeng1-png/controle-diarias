@@ -122,25 +122,18 @@ export default function PresencaPage() {
       let totalFaltas = 0;
       let totalFuncionarios = funcionarios.length;
 
-      // Group by Obra
-      const grouped: Record<string, { presentes: string[], faltas: string[], totalFuncs: number }> = {};
+      const presentes: string[] = [];
+      const faltas: string[] = [];
 
-      // Ensure consistent sorting for employees inside the groups
+      // Ensure consistent sorting for employees
       const sortedFuncionarios = [...funcionarios].sort((a, b) => a.nome.localeCompare(b.nome));
 
       sortedFuncionarios.forEach(f => {
-        const obraName = f.obra?.nome || 'Sem Obra';
-        if (!grouped[obraName]) {
-          grouped[obraName] = { presentes: [], faltas: [], totalFuncs: 0 };
-        }
-        
-        grouped[obraName].totalFuncs++;
-        
         if (presencas[f.id]) {
-          grouped[obraName].presentes.push(f.nome);
+          presentes.push(f.nome);
           totalPresentes++;
         } else {
-          grouped[obraName].faltas.push(f.nome);
+          faltas.push(f.nome);
           totalFaltas++;
         }
       });
@@ -163,29 +156,17 @@ export default function PresencaPage() {
       let message = `${saudacao}\nSegue abaixo o controle de diárias referente ao dia de hoje.\n\n`;
       message += `📋 *CONTROLE DE DIÁRIAS*\n📅 *${diaSemana}, ${dataFormatada}*\n══════════════════════════════\n\n`;
 
-      // Sort obras alphabetically
-      const sortedObras = Object.keys(grouped).sort();
-
-      sortedObras.forEach(obra => {
-        const group = grouped[obra];
-        if (group.totalFuncs === 0) return;
-
-        message += `🏗 *OBRA: ${obra}*\n`;
-        message += `👷 Funcionários: ${group.totalFuncs}\n`;
-        message += `✅ Presentes: ${group.presentes.length}\n`;
-        message += `❌ Faltaram: ${group.faltas.length}\n`;
-        message += `──────────────────────────────\n`;
-        
-        group.presentes.forEach(nome => {
-          message += `✅ ${nome}\n`;
-        });
-        
-        group.faltas.forEach(nome => {
-          message += `❌ ${nome}\n`;
-        });
-        
-        message += `\n══════════════════════════════\n\n`;
+      message += `👷 *FUNCIONÁRIOS PRESENTES (${presentes.length})*\n`;
+      presentes.forEach(nome => {
+        message += `✅ ${nome}\n`;
       });
+      message += `\n══════════════════════════════\n\n`;
+
+      message += `❌ *FUNCIONÁRIOS AUSENTES (${faltas.length})*\n`;
+      faltas.forEach(nome => {
+        message += `❌ ${nome}\n`;
+      });
+      message += `\n══════════════════════════════\n\n`;
 
       const percPresentes = totalFuncionarios > 0 ? Math.round((totalPresentes / totalFuncionarios) * 100) : 0;
       const percFaltas = totalFuncionarios > 0 ? Math.round((totalFaltas / totalFuncionarios) * 100) : 0;

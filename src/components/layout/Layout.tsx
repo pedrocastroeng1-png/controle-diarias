@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import logo from '../../assets/logo.png';
+import { APP_VERSION } from '../../config/version';
 
 export function AdminLayout() {
   const { usuario, logout } = useAuth();
@@ -69,6 +70,10 @@ export function AdminLayout() {
             <LogOut className="mr-3 h-5 w-5" />
             Sair
           </button>
+          <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-400 text-center">
+            Controle de Diárias<br/>
+            Versão {APP_VERSION}
+          </div>
         </div>
       </aside>
 
