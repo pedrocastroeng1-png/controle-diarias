@@ -10,7 +10,14 @@ export default defineConfig(() => {
       react(), 
       tailwindcss(),
       VitePWA({
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
         registerType: 'prompt',
+        injectManifest: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          maximumFileSizeToCacheInBytes: 5000000
+        },
         manifest: {
           short_name: "Diárias",
           name: "Controle de Diárias",
@@ -65,12 +72,6 @@ export default defineConfig(() => {
           background_color: "#FFFFFF",
           theme_color: "#2563EB",
           display: "standalone"
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-          sourcemap: true,
-          cleanupOutdatedCaches: true,
-          maximumFileSizeToCacheInBytes: 5000000
         }
       })
     ],
@@ -82,6 +83,9 @@ export default defineConfig(() => {
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    },
+    define: {
+      __BUILD_VERSION__: JSON.stringify(Date.now().toString())
     },
     build: { chunkSizeWarningLimit: 3000 }
   };

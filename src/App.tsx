@@ -16,6 +16,7 @@ import Funcionarios from './pages/admin/Funcionarios';
 import Relatorios from './pages/admin/Relatorios';
 import PresencaPage from './pages/operador/Presenca';
 import { PwaUpdateModal } from './components/PwaUpdateModal';
+import Debug from './pages/debug/Debug';
 
 function App() {
   return (
@@ -41,6 +42,8 @@ function App() {
             <Route index element={<Navigate to="/operador/presenca" replace />} />
             <Route path="presenca" element={<PresencaPage />} />
           </Route>
+          
+          <Route path="/debug" element={<Debug />} />
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

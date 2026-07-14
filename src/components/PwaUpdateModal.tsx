@@ -27,7 +27,7 @@ export function PwaUpdateModal() {
         // Also we can manually expose the registration if needed for login
         // but typically the visibility change handles most cases, 
         // and we can use a global window function to trigger it.
-        window.checkPwaUpdate = () => {
+        (window as any).checkPwaUpdate = () => {
           r.update();
         };
       }
@@ -39,8 +39,8 @@ export function PwaUpdateModal() {
 
   // Call the check on login if the user state changes (meaning they logged in)
   useEffect(() => {
-    if (usuario && window.checkPwaUpdate) {
-      window.checkPwaUpdate();
+    if (usuario && (window as any).checkPwaUpdate) {
+      (window as any).checkPwaUpdate();
     }
   }, [usuario]);
 
@@ -69,7 +69,9 @@ export function PwaUpdateModal() {
           
           <div className="flex flex-col gap-3 w-full">
             <button
-              onClick={() => updateServiceWorker(true)}
+              onClick={async () => {
+                updateServiceWorker(true);
+              }}
               className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
             >
               Atualizar
