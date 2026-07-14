@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { Funcionario, Funcao, Obra } from '../../lib/types';
-import { Edit2, Trash2, Plus } from 'lucide-react';
+import { Edit2, Ban, Plus, RefreshCcw } from 'lucide-react';
 
 export default function Funcionarios() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -11,6 +11,7 @@ export default function Funcionarios() {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
   
   const [nome, setNome] = useState('');
   const [funcaoId, setFuncaoId] = useState('');
@@ -19,14 +20,14 @@ export default function Funcionarios() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filter]);
 
   async function loadData() {
     setLoading(true);
     setErro('');
     try {
       const [funcs, funcsData, obsData] = await Promise.all([
-        api.getFuncionarios(),
+        api.getFuncionarios(filter),
         api.getFuncoes(),
         api.getObras()
       ]);
@@ -64,17 +65,30 @@ export default function Funcionarios() {
   }
 
   async function handleDelete(id: string) {
-    if (confirm('Tem certeza que deseja excluir este funcionário?')) {
+    if (confirm('Deseja realmente desativar este funcionário?')) {
       setLoading(true);
       setErro('');
       try {
         await api.deleteFuncionario(id);
         await loadData();
       } catch (error) {
-        setErro('Ocorreu um erro ao excluir.');
+        setErro('Ocorreu um erro ao desativar.');
       } finally {
         setLoading(false);
       }
+    }
+  }
+
+  async function handleReactivate(id: string) {
+    setLoading(true);
+    setErro('');
+    try {
+      await api.updateFuncionario(id, { ativo: true });
+      await loadData();
+    } catch (error) {
+      setErro('Ocorreu um erro ao reativar.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -91,9 +105,30 @@ export default function Funcionarios() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold text-gray-900">Funcionários</h2>
-        <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
+            <button
+              onClick={() => setFilter('todos')}
+              className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${filter === 'todos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setFilter('ativos')}
+              className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${filter === 'ativos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Ativos
+            </button>
+            <button
+              onClick={() => setFilter('inativos')}
+              className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${filter === 'inativos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Inativos
+            </button>
+          </div>
+          <div className="relative w-full sm:w-64">
           <input
             type="text"
             placeholder="Pesquisar funcionário..."
@@ -105,6 +140,7 @@ export default function Funcionarios() {
             <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
             </svg>
+          </div>
           </div>
         </div>
       </div>
@@ -189,6 +225,9 @@ export default function Funcionarios() {
                   Nome
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Função
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -210,9 +249,20 @@ export default function Funcionarios() {
                    </td>
                 </tr>
               ) : filteredFuncionarios.map((funcionario) => (
-                <tr key={funcionario.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={funcionario.id} className={`hover:bg-gray-50 ${funcionario.ativo === false ? 'opacity-75' : ''}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${funcionario.ativo === false ? 'text-gray-500' : 'text-gray-900'}`}>
                     {funcionario.nome}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {funcionario.ativo !== false ? (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        INATIVO
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {funcionario.funcao?.nome || '-'}
@@ -224,9 +274,15 @@ export default function Funcionarios() {
                     <button onClick={() => handleEdit(funcionario)} className="text-blue-600 hover:text-blue-900 p-1" title="Editar">
                       <Edit2 className="h-4 w-4" />
                     </button>
-                    <button onClick={() => handleDelete(funcionario.id)} className="text-red-600 hover:text-red-900 p-1" title="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {funcionario.ativo !== false ? (
+                      <button onClick={() => handleDelete(funcionario.id)} className="text-red-600 hover:text-red-900 p-1" title="Desativar">
+                        <Ban className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button onClick={() => handleReactivate(funcionario.id)} className="text-green-600 hover:text-green-900 p-1" title="Reativar">
+                        <RefreshCcw className="h-4 w-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

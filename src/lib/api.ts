@@ -69,13 +69,20 @@ export const api = {
   },
 
   // Funcionarios
-  getFuncionarios: async (): Promise<Funcionario[]> => {
+  getFuncionarios: async (status: 'ativos' | 'inativos' | 'todos' = 'ativos'): Promise<Funcionario[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
-    const { data, error } = await supabase
+    let query = supabase
       .from('funcionarios')
       .select(`*, funcao:funcoes(*), obra:obras(*)`)
-      .eq('ativo', true)
       .order('nome');
+
+    if (status === 'ativos') {
+      query = query.eq('ativo', true);
+    } else if (status === 'inativos') {
+      query = query.eq('ativo', false);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return data as any;
   },

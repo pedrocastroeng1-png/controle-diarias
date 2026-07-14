@@ -23,6 +23,7 @@ export interface Funcionario {
   nome: string;
   funcao_id: string;
   obra_id: string;
+  ativo?: boolean;
   funcao?: Funcao;
   obra?: Obra;
 }
