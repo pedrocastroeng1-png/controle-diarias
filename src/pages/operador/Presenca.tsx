@@ -3,6 +3,7 @@ import { api } from '../../lib/api';
 import { Funcionario } from '../../lib/types';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
+import { User, Camera } from 'lucide-react';
 
 export default function PresencaPage() {
   const { usuario } = useAuth();
@@ -13,14 +14,26 @@ export default function PresencaPage() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+  
+  const showToast = (message: string, type: 'success'|'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+  const [savedRecords, setSavedRecords] = useState<Record<string, boolean>>({});
+  const [actionMenuFuncId, setActionMenuFuncId] = useState<string | null>(null);
+  const [funcToDelete, setFuncToDelete] = useState<string | null>(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [erro, setErro] = useState('');
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  
 
   const [cameraModalFuncId, setCameraModalFuncId] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<{file: File, url: string} | null>(null);
   const [capturedFotos, setCapturedFotos] = useState<Record<string, File>>({});
   const [employeeRegistrationPhoto, setEmployeeRegistrationPhoto] = useState<string>('');
 
   const [jaRegistradoHoje, setJaRegistradoHoje] = useState(false);
+  const [temRegistros, setTemRegistros] = useState(false);
 
   const hoje = format(new Date(), 'yyyy-MM-dd');
   const [selectedDate, setSelectedDate] = useState(hoje);
@@ -49,8 +62,10 @@ export default function PresencaPage() {
       
       if (presencasData.length > 0) {
         setJaRegistradoHoje(!isAdmin);
+        setTemRegistros(true);
       } else {
         setJaRegistradoHoje(false);
+        setTemRegistros(false);
       }
 
       const presencasMap: Record<string, boolean> = {};
@@ -61,13 +76,16 @@ export default function PresencaPage() {
       });
 
       // Sobrescrever com os dados salvos
+      const newSavedRecords: Record<string, boolean> = {};
       presencasData.forEach(p => {
         if (presencasMap[p.funcionario_id] !== undefined) {
           presencasMap[p.funcionario_id] = p.presente;
+          newSavedRecords[p.funcionario_id] = true;
         }
       });
 
       setPresencas(presencasMap);
+      setSavedRecords(newSavedRecords);
     } catch (error) {
       // Ignore presence load error, initialize with false
       const presencasMap: Record<string, boolean> = {};
@@ -84,6 +102,12 @@ export default function PresencaPage() {
   
   const togglePresenca = async (funcionarioId: string) => {
     if (jaRegistradoHoje || saving) return;
+    
+    if (isAdmin && savedRecords[funcionarioId]) {
+      setActionMenuFuncId(funcionarioId);
+      return;
+    }
+
     const isCurrentlyPresent = presencas[funcionarioId] || false;
     
     if (isCurrentlyPresent) {
@@ -106,6 +130,91 @@ export default function PresencaPage() {
   };
 
 
+  const handleActionChangeStatus = async () => {
+    if (!actionMenuFuncId) return;
+    const isCurrentlyPresent = presencas[actionMenuFuncId] || false;
+    const newStatus = !isCurrentlyPresent;
+    
+    // Optimistic UI update
+    setPresencas(prev => ({ ...prev, [actionMenuFuncId]: newStatus }));
+    
+    // If it's already a saved record, update the backend immediately
+    if (isAdmin && savedRecords[actionMenuFuncId]) {
+      try {
+        setSaving(true);
+        const now = new Date().toISOString();
+        await api.salvarPresencas([{
+          funcionario_id: actionMenuFuncId,
+          obra_id: funcionarios.find(f => f.id === actionMenuFuncId)?.obra_id,
+          data: selectedDate,
+          presente: newStatus,
+          photo_taken_at: now,
+          photo_taken_by: usuario?.id || null
+        }]);
+      } catch (err: any) {
+        // Revert on error
+        setPresencas(prev => ({ ...prev, [actionMenuFuncId]: isCurrentlyPresent }));
+        setErro('Erro ao alterar status no servidor.');
+        showToast('❌ Erro ao alterar status', 'error');
+        setSaving(false);
+        setActionMenuFuncId(null);
+        return;
+      } finally {
+        setSaving(false);
+      }
+    }
+    
+    setSavedSuccess(false);
+    setActionMenuFuncId(null);
+    showToast('✅ Status atualizado', 'success');
+  };
+
+  const handleActionReplacePhoto = async () => {
+    if (!actionMenuFuncId) return;
+    const f = funcionarios.find(x => x.id === actionMenuFuncId);
+    if (f?.photo_path) {
+      try {
+        const url = await api.getPhotoUrl('employee-photos', f.photo_path);
+        setEmployeeRegistrationPhoto(url);
+      } catch (e) {
+        setEmployeeRegistrationPhoto('');
+      }
+    } else {
+      setEmployeeRegistrationPhoto('');
+    }
+    setCameraModalFuncId(actionMenuFuncId);
+    setActionMenuFuncId(null);
+  };
+
+  const confirmDeleteFunc = async () => {
+    if (!funcToDelete) return;
+    setSaving(true);
+    setErro('');
+    
+    try {
+      await api.deletePresencaFuncionario(funcToDelete, selectedDate);
+      
+      // Update local state
+      setSavedRecords(prev => {
+        const next = { ...prev };
+        delete next[funcToDelete];
+        return next;
+      });
+      setPresencas(prev => ({ ...prev, [funcToDelete]: false }));
+      
+      // If no records left, reset temRegistros
+      const remainingRecords = Object.keys(savedRecords).filter(k => k !== funcToDelete && savedRecords[k]);
+      if (remainingRecords.length === 0) {
+        setJaRegistradoHoje(false);
+      }
+    } catch (error: any) {
+      setErro(error.message || 'Ocorreu um erro ao deletar a presença.');
+    } finally {
+      setSaving(false);
+      setFuncToDelete(null);
+    }
+  };
+
   const handleSalvarClick = () => {
     if (jaRegistradoHoje) return;
     setShowConfirm(true);
@@ -115,6 +224,8 @@ export default function PresencaPage() {
   
   
   
+
+
   const handleConfirmSalvar = async () => {
     setShowConfirm(false);
     setSaving(true);
@@ -148,7 +259,8 @@ export default function PresencaPage() {
       }));
 
       await api.salvarPresencas(registrosToSave);
-      setShowSuccessDialog(true);
+      setSavedSuccess(true);
+      showToast('✅ Presença registrada com sucesso!', 'success');
     } catch (error: any) {
       setErro(error.message || 'Ocorreu um erro ao salvar a lista de presenças.');
     } finally {
@@ -160,10 +272,6 @@ export default function PresencaPage() {
 
 
 
-  const handleSuccessOk = () => {
-    setShowSuccessDialog(false);
-    loadFuncionariosEPresencas();
-  };
 
   const handleShareWhatsApp = () => {
     try {
@@ -284,25 +392,40 @@ export default function PresencaPage() {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-4">
                 {funcionarios.map(f => {
                   const isPresent = presencas[f.id] || false;
+                  // Handle other fake statuses just for display? No, only Present/Absent is saved.
+                  // The user requested colored badges. 
+                  const statusBadge = isPresent 
+                    ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">🟢 Presente</span>
+                    : <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">🔴 Falta</span>;
+
                   return (
                     <button 
                       key={f.id}
                       onClick={() => togglePresenca(f.id)}
-                      disabled={jaRegistradoHoje || saving}
-                      className={`flex items-center p-4 rounded-xl text-left w-full transition-all border ${
+                      disabled={!isAdmin && (jaRegistradoHoje || saving)}
+                      className={`flex flex-col sm:flex-row items-start sm:items-center p-5 rounded-2xl text-left w-full transition-all border ${
                         isPresent 
-                          ? 'bg-blue-50 border-blue-200 text-blue-900 shadow-sm' 
-                          : 'bg-white border-gray-200 text-gray-900 shadow-sm hover:bg-gray-50'
-                      } ${(jaRegistradoHoje || saving) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                          ? 'bg-white border-green-200 shadow-md shadow-green-100/50 hover:border-green-300' 
+                          : 'bg-white border-gray-200 shadow-sm hover:border-gray-300'
+                      } ${(!isAdmin && (jaRegistradoHoje || saving)) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} relative overflow-hidden`}
                     >
-                      <div className="flex-shrink-0 mr-4 text-2xl">
-                        {isPresent ? '🟢' : '⚪'}
-                      </div>
-                      <div className="flex-1 text-lg font-medium">
-                        {f.nome}
+                      <div className="flex items-center w-full">
+                        <div className="flex-shrink-0 mr-4 h-16 w-16 bg-gray-100 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center">
+                          {f.photo_path ? (
+                            <img src={f.photo_path} alt={f.nome} className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                          ) : null}
+                          <User className={`h-8 w-8 text-gray-300 ${f.photo_path ? 'hidden' : ''}`} />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-4">
+                          <p className="text-lg font-bold text-gray-900 truncate">{f.nome}</p>
+                          <p className="text-sm font-medium text-gray-500 truncate">{f.funcao?.nome || 'Função não definida'}</p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {statusBadge}
+                        </div>
                       </div>
                     </button>
                   );
@@ -315,6 +438,7 @@ export default function PresencaPage() {
 
       {!loading && funcionarios.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 sm:relative sm:bg-transparent sm:border-0 sm:p-0 z-10 flex gap-3">
+          
           <button
             onClick={handleSalvarClick}
             disabled={saving || jaRegistradoHoje}
@@ -342,67 +466,200 @@ export default function PresencaPage() {
 
       
       {cameraModalFuncId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-             <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Registrar Presença</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0">
+             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+             <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Registrar Foto</h3>
              
-             <div className="mb-6">
-                <span className="text-sm font-medium text-gray-700 block mb-2 text-center">Foto de Cadastro</span>
-                <div className="h-32 w-32 mx-auto rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-white shadow-md">
-                  {employeeRegistrationPhoto ? (
-                    <img src={employeeRegistrationPhoto} className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-12 h-12 text-gray-300" />
-                  )}
-                </div>
-                <p className="text-center font-bold mt-3 text-lg text-gray-900">{funcionarios.find(f => f.id === cameraModalFuncId)?.nome}</p>
-             </div>
-
-             <label className="flex items-center justify-center w-full cursor-pointer px-4 py-3 bg-blue-600 text-white rounded-xl text-center font-medium hover:bg-blue-700 transition">
-                <Camera className="w-5 h-5 mr-2" />
-                Tirar Foto (Câmera)
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment" 
-                  className="hidden" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setCapturedFotos(prev => ({ ...prev, [cameraModalFuncId]: file }));
-                      setPresencas(prev => ({ ...prev, [cameraModalFuncId]: true }));
-                      setSavedSuccess(false);
+             {!previewPhoto ? (
+               <>
+                 <div className="mb-6">
+                    <span className="text-sm font-medium text-gray-700 block mb-2 text-center">Foto Atual</span>
+                    <div className="h-32 w-32 mx-auto rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-white shadow-md">
+                      {employeeRegistrationPhoto ? (
+                        <img src={employeeRegistrationPhoto} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-12 h-12 text-gray-300" />
+                      )}
+                    </div>
+                    <p className="text-center font-bold mt-3 text-lg text-gray-900">{funcionarios.find(f => f.id === cameraModalFuncId)?.nome}</p>
+                 </div>
+                 <label className="flex items-center justify-center w-full cursor-pointer px-4 py-4 bg-gray-900 text-white rounded-2xl text-center font-medium hover:bg-gray-800 transition shadow-md">
+                    <Camera className="w-6 h-6 mr-3" />
+                    Abrir Câmera
+                    <input 
+                       type="file" 
+                       accept="image/*" 
+                       capture="environment" 
+                       className="hidden" 
+                       onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setPreviewPhoto({
+                            file,
+                            url: URL.createObjectURL(file)
+                          });
+                        }
+                      }} 
+                     />
+                 </label>
+                 <button 
+                    onClick={() => {
                       setCameraModalFuncId(null);
-                    }
-                  }} 
-                />
-             </label>
+                      setPreviewPhoto(null);
+                    }}
+                   className="mt-4 w-full px-4 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 transition"
+                 >
+                   Cancelar
+                 </button>
+               </>
+             ) : (
+               <>
+                 <div className="mb-6">
+                    <span className="text-sm font-medium text-gray-700 block mb-2 text-center">Nova Foto</span>
+                    <div className="h-48 w-48 mx-auto rounded-3xl overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-white shadow-md">
+                      <img src={previewPhoto.url} className="w-full h-full object-cover" />
+                    </div>
+                 </div>
+                 <button 
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      
+                      try {
+                        // If it's a replacement (already saved), update immediately
+                        if (isAdmin && savedRecords[cameraModalFuncId]) {
+                           const now = new Date().toISOString();
+                           const photo_path = await api.uploadAttendancePhoto(previewPhoto.file, cameraModalFuncId);
+                           await api.salvarPresencas([{
+                              funcionario_id: cameraModalFuncId,
+                              obra_id: funcionarios.find(f => f.id === cameraModalFuncId)?.obra_id,
+                              data: selectedDate,
+                              presente: true,
+                              photo_path,
+                              photo_taken_at: now,
+                              photo_taken_by: usuario?.id || null
+                           }]);
+                           showToast('✅ Foto substituída com sucesso!', 'success');
+                        } else {
+                           // Standard flow: just save to state for bulk submission
+                           setCapturedFotos(prev => ({ ...prev, [cameraModalFuncId]: previewPhoto.file }));
+                           setPresencas(prev => ({ ...prev, [cameraModalFuncId]: true }));
+                           setSavedSuccess(false);
+                        }
+                        
+                        setCameraModalFuncId(null);
+                        setPreviewPhoto(null);
+                      } catch (err: any) {
+                        setErro(err.message || 'Erro ao processar foto');
+                        showToast('❌ Erro ao processar foto', 'error');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                   className="flex justify-center items-center w-full px-4 py-4 bg-green-600 text-white rounded-2xl text-center font-medium hover:bg-green-700 transition shadow-md disabled:opacity-70"
+                 >
+                   {saving ? 'Salvando...' : 'Confirmar e Salvar'}
+                 </button>
+                 <button 
+                    disabled={saving}
+                    onClick={() => setPreviewPhoto(null)}
+                   className="mt-4 w-full px-4 py-4 bg-white border-2 border-gray-100 text-gray-700 rounded-2xl font-medium hover:bg-gray-50 transition"
+                 >
+                   Tirar Outra Foto
+                 </button>
+               </>
+             )}
+          </div>
+        </div>
+      )}
 
-             <button 
-               onClick={() => setCameraModalFuncId(null)}
-               className="mt-3 w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
-             >
-               Cancelar
-             </button>
+      {actionMenuFuncId && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">
+              Ações de Presença
+            </h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              {funcionarios.find(f => f.id === actionMenuFuncId)?.nome}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleActionChangeStatus}
+                className="w-full px-4 py-4 font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors flex items-center gap-4 text-left"
+              >
+                <span className="text-2xl">🔄</span> <span className="font-medium text-lg">Alterar Status</span>
+              </button>
+              <button 
+                onClick={handleActionReplacePhoto}
+                className="w-full px-4 py-4 font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors flex items-center gap-4 text-left"
+              >
+                <span className="text-2xl">📸</span> <span className="font-medium text-lg">Substituir Foto</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setFuncToDelete(actionMenuFuncId);
+                  setActionMenuFuncId(null);
+                }}
+                className="w-full px-4 py-4 font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-2xl transition-colors flex items-center gap-4 text-left"
+              >
+                <span className="text-2xl">🗑️</span> <span className="font-medium text-lg">Excluir Presença</span>
+              </button>
+            </div>
+            <button 
+              onClick={() => setActionMenuFuncId(null)}
+              className="mt-6 w-full px-4 py-4 text-lg font-medium text-gray-600 bg-white border-2 border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {funcToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 text-center text-red-600">Excluir Presença</h3>
+            <p className="text-gray-600 mb-6 text-center text-lg">
+              Are you sure you want to delete this attendance record for <strong>{funcionarios.find(f => f.id === funcToDelete)?.nome}</strong>?
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button 
+                onClick={() => setFuncToDelete(null)}
+                className="w-full sm:w-auto px-6 py-3 font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors order-2 sm:order-1"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteFunc}
+                disabled={saving}
+                className="w-full sm:w-auto px-6 py-3 font-medium text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 order-1 sm:order-2"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmar</h3>
-            <p className="text-gray-600 mb-6">Deseja salvar a lista de presença?</p>
-            <div className="flex justify-end gap-3">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmar</h3>
+            <p className="text-gray-600 mb-6 text-center text-lg">Deseja salvar a lista de presença?</p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button 
                 onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full sm:w-auto px-6 py-3 font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors order-2 sm:order-1"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleConfirmSalvar}
-                className="px-4 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="w-full sm:w-auto px-6 py-3 font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors order-1 sm:order-2"
               >
                 Salvar
               </button>
@@ -411,26 +668,13 @@ export default function PresencaPage() {
         </div>
       )}
 
-      {showSuccessDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl text-center">
-            <div className="text-5xl mb-4">✅</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Presença registrada com sucesso!</h3>
-            <p className="text-gray-600 mb-6">A presença foi registrada com sucesso.<br/>O que deseja fazer agora?</p>
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleSuccessOk}
-                className="w-full px-4 py-3 font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <span>✅</span> Fechar
-              </button>
-              <button 
-                onClick={handleShareWhatsApp}
-                className="w-full px-4 py-3 font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <span>🟢</span> Compartilhar no WhatsApp
-              </button>
-            </div>
+
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-200">
+          <div className={`px-6 py-3 rounded-full shadow-lg font-medium text-sm flex items-center gap-2 ${
+            toast.type === 'success' ? 'bg-gray-900 text-white' : 'bg-red-600 text-white'
+          }`}>
+            {toast.message}
           </div>
         </div>
       )}

@@ -147,6 +147,12 @@ export const api = {
     if (error) throw error;
     return presencas as any;
   },
+  deletePresencaFuncionario: async (funcionario_id: string, data: string): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase.from('presencas').delete().eq('funcionario_id', funcionario_id).eq('data', data);
+    if (error) throw error;
+  },
+
   salvarPresencas: async (presencas: Array<any>): Promise<void> => {
     if (!supabase) throw new Error('Supabase não configurado');
     const { error } = await supabase

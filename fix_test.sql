@@ -1,1 +1,0 @@
--- let's write a test policy
