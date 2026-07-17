@@ -16,6 +16,7 @@ export default function Funcionarios() {
   const [nome, setNome] = useState('');
   const [funcaoId, setFuncaoId] = useState('');
   const [obraId, setObraId] = useState('');
+  const [foto, setFoto] = useState<File | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,15 +48,24 @@ export default function Funcionarios() {
     setSaving(true);
     setErro('');
     try {
+      let fId = editId;
       if (editId) {
         await api.updateFuncionario(editId, { nome, funcao_id: funcaoId, obra_id: obraId });
-        setEditId(null);
       } else {
-        await api.createFuncionario({ nome, funcao_id: funcaoId, obra_id: obraId });
+        const created = await api.createFuncionario({ nome, funcao_id: funcaoId, obra_id: obraId });
+        fId = created.id;
       }
+
+      if (foto && fId) {
+        const url = await api.uploadEmployeePhoto(foto, fId);
+        await api.updateFuncionario(fId, { photo_path: url });
+      }
+
       setNome('');
       setFuncaoId('');
       setObraId('');
+      setFoto(null);
+      setEditId(null);
       await loadData();
     } catch (error) {
       setErro('Ocorreu um erro ao salvar os dados.');
@@ -194,6 +204,18 @@ export default function Funcionarios() {
                 <option key={o.id} value={o.id}>{o.nome}</option>
               ))}
             </select>
+          </div>
+          <div className="col-span-1 md:col-span-4">
+            <label htmlFor="foto" className="block text-sm font-medium text-gray-700 mb-1">
+              Foto do Funcionário
+            </label>
+            <input
+              type="file"
+              id="foto"
+              accept="image/*"
+              onChange={(e) => setFoto(e.target.files?.[0] || null)}
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white"
+            />
           </div>
           <div className="col-span-1 md:col-span-4 flex justify-end gap-3 mt-2">
             {editId && (

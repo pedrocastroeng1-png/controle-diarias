@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck, Camera } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import logo from '../../assets/logo.png';
 import { APP_VERSION } from '../../config/version';
@@ -25,6 +25,7 @@ export function AdminLayout() {
     { name: 'Funcionários', path: '/admin/funcionarios', icon: Users },
     { name: 'Presença', path: '/admin/presenca', icon: ClipboardCheck },
     { name: 'Relatórios', path: '/admin/relatorios', icon: FileText },
+    { name: 'Auditoria de Presenças', path: '/admin/auditoria', icon: Camera },
   ];
 
   return (
@@ -141,8 +142,13 @@ export function OperadorLayout() {
           </div>
         </div>
       </header>
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        <Outlet />
+            <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <footer className="mt-8 py-4 border-t border-gray-200 text-center text-xs text-gray-400">
+          Versão {APP_VERSION}
+        </footer>
       </main>
     </div>
   );

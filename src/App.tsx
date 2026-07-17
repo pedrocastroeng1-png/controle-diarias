@@ -14,6 +14,7 @@ import Obras from './pages/admin/Obras';
 import Funcoes from './pages/admin/Funcoes';
 import Funcionarios from './pages/admin/Funcionarios';
 import Relatorios from './pages/admin/Relatorios';
+import AuditoriaPresencas from './pages/admin/AuditoriaPresencas';
 import PresencaPage from './pages/operador/Presenca';
 import { PwaUpdateModal } from './components/PwaUpdateModal';
 import Debug from './pages/debug/Debug';
@@ -35,6 +36,7 @@ function App() {
             <Route path="funcionarios" element={<Funcionarios />} />
             <Route path="presenca" element={<PresencaPage />} />
             <Route path="relatorios" element={<Relatorios />} />
+            <Route path="auditoria" element={<AuditoriaPresencas />} />
           </Route>
 
           {/* Operator Routes */}

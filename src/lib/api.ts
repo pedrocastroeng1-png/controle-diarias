@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import bcrypt from 'bcryptjs';
+
 import { Usuario, Obra, Funcao, Funcionario, Presenca } from './types';
 
 export const api = {
@@ -7,15 +9,29 @@ export const api = {
     if (!supabase) throw new Error('Supabase não configurado');
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, usuario, perfil')
+      .select('id, usuario, perfil, senha')
       .eq('usuario', usuario)
-      .eq('senha', senha)
       .eq('ativo', true)
       .single();
-    if (error) {
-      throw error;
+
+    if (error || !data) {
+      throw new Error('Usuário ou senha inválidos.');
     }
-    return data;
+
+    const { senha: passwordHash, ...userData } = data;
+    
+    let isValid = false;
+    if (passwordHash && (passwordHash.startsWith('$2a$') || passwordHash.startsWith('$2b$'))) {
+      isValid = await bcrypt.compare(senha, passwordHash);
+    } else {
+      isValid = senha === passwordHash;
+    }
+
+    if (!isValid) {
+      throw new Error('Usuário ou senha inválidos.');
+    }
+
+    return userData;
   },
 
   // Obras
@@ -164,9 +180,65 @@ export const api = {
     return data as any;
   },
 
-  getDashboardStats: async (hoje: string) => {
+  // Storage
+  uploadEmployeePhoto: async (file: File, employeeId: string): Promise<string> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${employeeId}_${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('employee-photos')
+      .upload(fileName, file, { upsert: true });
+
+    if (error) throw error;
+    return data.path;
+  },
+
+  uploadAttendancePhoto: async (file: Blob, employeeId: string): Promise<string> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `${employeeId}_${timestamp}.jpg`;
+    const { data, error } = await supabase.storage
+      .from('attendance-photos')
+      .upload(fileName, file, { contentType: 'image/jpeg' });
+
+    if (error) throw error;
+    return data.path;
+  },
+
+  getPhotoUrl: async (bucket: 'employee-photos' | 'attendance-photos', path: string): Promise<string> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 60); // 1 hour
+
+    if (error) throw error;
+    return data.signedUrl;
+  },
+
+  // Auditoria
+  getAuditoriaPresencas: async (funcionario_id: string): Promise<Presenca[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
     
+    // Get presences from last 15 days with photo
+    const quinzeDiasAtras = new Date();
+    quinzeDiasAtras.setDate(quinzeDiasAtras.getDate() - 15);
+    const dataLimite = quinzeDiasAtras.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('presencas')
+      .select(`*, funcionario:funcionarios!inner(*, funcao:funcoes(*), obra:obras(*))`)
+      .eq('funcionario_id', funcionario_id)
+      .not('photo_path', 'is', null)
+      .gte('data', dataLimite)
+      .order('data', { ascending: false });
+
+    if (error) throw error;
+    return data as any;
+  },
+
+
+  getDashboardStats: async (hoje: string) => {
+    if (!supabase) throw new Error('Supabase não configurado');
     const { count: obrasCount } = await supabase.from('obras').select('*', { count: 'exact', head: true }).eq('ativo', true);
     const { count: funcionariosCount } = await supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('ativo', true);
     

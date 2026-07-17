@@ -15,6 +15,11 @@ export default function PresencaPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [erro, setErro] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
+  const [cameraModalFuncId, setCameraModalFuncId] = useState<string | null>(null);
+  const [capturedFotos, setCapturedFotos] = useState<Record<string, File>>({});
+  const [employeeRegistrationPhoto, setEmployeeRegistrationPhoto] = useState<string>('');
+
   const [jaRegistradoHoje, setJaRegistradoHoje] = useState(false);
 
   const hoje = format(new Date(), 'yyyy-MM-dd');
@@ -76,40 +81,84 @@ export default function PresencaPage() {
     }
   }
 
-  const togglePresenca = (funcionarioId: string) => {
+  
+  const togglePresenca = async (funcionarioId: string) => {
     if (jaRegistradoHoje || saving) return;
-    setPresencas(prev => ({
-      ...prev,
-      [funcionarioId]: !prev[funcionarioId]
-    }));
-    setSavedSuccess(false);
+    const isCurrentlyPresent = presencas[funcionarioId] || false;
+    
+    if (isCurrentlyPresent) {
+      setPresencas(prev => ({ ...prev, [funcionarioId]: false }));
+      setSavedSuccess(false);
+    } else {
+      const f = funcionarios.find(x => x.id === funcionarioId);
+      if (f?.photo_path) {
+        try {
+          const url = await api.getPhotoUrl('employee-photos', f.photo_path);
+          setEmployeeRegistrationPhoto(url);
+        } catch (e) {
+          setEmployeeRegistrationPhoto('');
+        }
+      } else {
+        setEmployeeRegistrationPhoto('');
+      }
+      setCameraModalFuncId(funcionarioId);
+    }
   };
+
 
   const handleSalvarClick = () => {
     if (jaRegistradoHoje) return;
     setShowConfirm(true);
   };
 
+  
+  
+  
+  
   const handleConfirmSalvar = async () => {
     setShowConfirm(false);
     setSaving(true);
+    setErro('');
     
-    const registrosToSave = funcionarios.map(f => ({
-      funcionario_id: f.id,
-      obra_id: f.obra_id,
-      data: selectedDate,
-      presente: presencas[f.id] || false
-    }));
-
     try {
+      const now = new Date().toISOString();
+      const userId = usuario?.id || null;
+      
+      const registrosToSave = await Promise.all(funcionarios.map(async (f) => {
+        let photo_path = undefined;
+        let photo_taken_at = undefined;
+        let photo_taken_by = undefined;
+        
+        if (presencas[f.id]) {
+           if (!capturedFotos[f.id]) {
+              throw new Error(`Falta foto de presença para ${f.nome}`);
+           }
+           photo_path = await api.uploadAttendancePhoto(capturedFotos[f.id], f.id);
+           photo_taken_at = now;
+           photo_taken_by = userId;
+        }
+        
+        return {
+          funcionario_id: f.id,
+          obra_id: f.obra_id,
+          data: selectedDate,
+          presente: presencas[f.id] || false,
+          ...(photo_path && { photo_path, photo_taken_at, photo_taken_by })
+        };
+      }));
+
       await api.salvarPresencas(registrosToSave);
       setShowSuccessDialog(true);
-    } catch (error) {
-      setErro('Ocorreu um erro ao salvar os dados.');
+    } catch (error: any) {
+      setErro(error.message || 'Ocorreu um erro ao salvar a lista de presenças.');
     } finally {
       setSaving(false);
     }
   };
+
+
+
+
 
   const handleSuccessOk = () => {
     setShowSuccessDialog(false);
@@ -288,6 +337,54 @@ export default function PresencaPage() {
               <span className="hidden sm:inline ml-2">WhatsApp</span>
             </button>
           )}
+        </div>
+      )}
+
+      
+      {cameraModalFuncId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+             <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Registrar Presença</h3>
+             
+             <div className="mb-6">
+                <span className="text-sm font-medium text-gray-700 block mb-2 text-center">Foto de Cadastro</span>
+                <div className="h-32 w-32 mx-auto rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-4 border-white shadow-md">
+                  {employeeRegistrationPhoto ? (
+                    <img src={employeeRegistrationPhoto} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-12 h-12 text-gray-300" />
+                  )}
+                </div>
+                <p className="text-center font-bold mt-3 text-lg text-gray-900">{funcionarios.find(f => f.id === cameraModalFuncId)?.nome}</p>
+             </div>
+
+             <label className="flex items-center justify-center w-full cursor-pointer px-4 py-3 bg-blue-600 text-white rounded-xl text-center font-medium hover:bg-blue-700 transition">
+                <Camera className="w-5 h-5 mr-2" />
+                Tirar Foto (Câmera)
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCapturedFotos(prev => ({ ...prev, [cameraModalFuncId]: file }));
+                      setPresencas(prev => ({ ...prev, [cameraModalFuncId]: true }));
+                      setSavedSuccess(false);
+                      setCameraModalFuncId(null);
+                    }
+                  }} 
+                />
+             </label>
+
+             <button 
+               onClick={() => setCameraModalFuncId(null)}
+               className="mt-3 w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
+             >
+               Cancelar
+             </button>
+          </div>
         </div>
       )}
 

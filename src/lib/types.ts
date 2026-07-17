@@ -24,6 +24,7 @@ export interface Funcionario {
   funcao_id: string;
   obra_id: string;
   ativo?: boolean;
+  photo_path?: string;
   funcao?: Funcao;
   obra?: Obra;
 }
@@ -34,6 +35,10 @@ export interface Presenca {
   obra_id: string;
   data: string;
   presente: boolean;
+  photo_path?: string;
+  photo_taken_at?: string;
+  photo_taken_by?: string;
+
   funcionario?: Funcionario;
 }
 

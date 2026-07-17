@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import re
+
+with open('src/pages/admin/Dashboard.tsx', 'r') as f:
+    content = f.read()
+
+new_dash = """import React, { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { HardHat, Users, CheckCircle, XCircle, DollarSign, ArrowRight, Activity, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
@@ -138,3 +143,8 @@ export default function Dashboard() {
     </div>
   );
 }
+"""
+
+with open('src/pages/admin/Dashboard.tsx', 'w') as f:
+    f.write(new_dash)
+
