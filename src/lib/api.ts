@@ -189,7 +189,10 @@ export const api = {
       .from('employee-photos')
       .upload(fileName, file, { upsert: true });
 
-    if (error) throw error;
+    if (error) {
+       console.error("Storage upload error:", error);
+       throw error;
+    }
     return data.path;
   },
 

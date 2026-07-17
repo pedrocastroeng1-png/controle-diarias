@@ -67,8 +67,12 @@ export default function Funcionarios() {
       setFoto(null);
       setEditId(null);
       await loadData();
-    } catch (error) {
-      setErro('Ocorreu um erro ao salvar os dados.');
+    } catch (error: any) {
+      console.error("Upload error details:", error);
+      const msg = error.message ? error.message : JSON.stringify(error);
+      const status = error.statusCode ? `(Status: ${error.statusCode})` : '';
+      const errObj = error.error ? `[${error.error}]` : '';
+      setErro(`Ocorreu um erro: ${msg} ${status} ${errObj}`);
     } finally {
       setSaving(false);
     }
