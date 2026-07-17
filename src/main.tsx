@@ -2,7 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import logo from './assets/logo.png';
+
 
 // Handle SW messages for 404 asset
 if ('serviceWorker' in navigator) {
@@ -17,7 +17,7 @@ if ('serviceWorker' in navigator) {
 async function verifyAssets() {
   if (sessionStorage.getItem('asset_checked')) return;
   try {
-    const res = await fetch(logo, { method: 'HEAD', cache: 'no-cache' });
+    const res = await fetch('/logo.png', { method: 'HEAD', cache: 'no-cache' });
     if (res.status === 404) {
       console.error('Core asset 404. Purging caches...');
       if ('caches' in window) {

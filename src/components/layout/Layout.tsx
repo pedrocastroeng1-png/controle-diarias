@@ -3,8 +3,8 @@ import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck, Camera } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import logo from '../../assets/logo.png';
-import { APP_VERSION } from '../../config/version';
+
+import { version } from '../../config/appVersion';
 
 export function AdminLayout() {
   const { usuario, logout } = useAuth();
@@ -33,7 +33,7 @@ export function AdminLayout() {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex">
         <div className="flex flex-col items-center justify-center py-6 px-4 border-b border-gray-200">
-          <img src={logo} alt="Controle de Diárias" className="h-24 w-24 object-contain mb-3" />
+          <img src="/logo.png" alt="Controle de Diárias" className="h-24 w-24 object-contain mb-3" />
           <h1 className="text-lg font-bold text-gray-900 text-center leading-tight">Controle de Diárias</h1>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
@@ -73,7 +73,7 @@ export function AdminLayout() {
           </button>
           <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-400 text-center">
             Controle de Diárias<br/>
-            Versão {APP_VERSION}
+            Versão {version}
           </div>
         </div>
       </aside>
@@ -81,7 +81,7 @@ export function AdminLayout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6 gap-3 md:hidden">
-           <img src={logo} alt="Controle de Diárias" className="h-10 w-10 object-contain" />
+           <img src="/logo.png" alt="Controle de Diárias" className="h-10 w-10 object-contain" />
            <h1 className="text-xl font-bold text-gray-900 flex-1">Controle de Diárias</h1>
            <button onClick={logout} className="text-gray-500 hover:text-red-600">
              <LogOut className="h-6 w-6" />
@@ -114,7 +114,7 @@ export function OperadorLayout() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center gap-3">
-                <img src={logo} alt="Controle de Diárias" className="h-10 w-10 object-contain" />
+                <img src="/logo.png" alt="Controle de Diárias" className="h-10 w-10 object-contain" />
                 <h1 className="text-lg font-bold text-gray-900 leading-tight hidden sm:block">Controle de Diárias</h1>
               </div>
               <div className="ml-6 flex space-x-8">
@@ -147,7 +147,7 @@ export function OperadorLayout() {
           <Outlet />
         </div>
         <footer className="mt-8 py-4 border-t border-gray-200 text-center text-xs text-gray-400">
-          Versão {APP_VERSION}
+          Versão {version}
         </footer>
       </main>
     </div>

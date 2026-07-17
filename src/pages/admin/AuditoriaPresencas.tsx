@@ -64,19 +64,29 @@ export default function AuditoriaPresencas() {
   }
 
   async function openModal(presenca: Presenca) {
+    console.log('--- DEBUG AUDITORIA ---');
+    console.log('Opening modal for presenca:', presenca);
+    console.log('Photo path:', presenca.photo_path);
+    
     setSelectedPresenca(presenca);
     setAttendancePhotoUrl('');
-    setModalOpen(true);
+    
     try {
       if (presenca.photo_path) {
+         console.log('Generating signed URL for attendance-photos:', presenca.photo_path);
          const url = await api.getPhotoUrl('attendance-photos', presenca.photo_path);
+         console.log('Generated Signed URL:', url);
          setAttendancePhotoUrl(url);
+      } else {
+         console.log('No photo_path found for this attendance record.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar foto de presença', err);
+      console.error('Error details:', err.message || err);
+    } finally {
+      setModalOpen(true);
     }
   }
-
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
@@ -216,7 +226,7 @@ export default function AuditoriaPresencas() {
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" onClick={() => setModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full">
+            <div className="relative z-10 inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
@@ -230,7 +240,12 @@ export default function AuditoriaPresencas() {
                         <span className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Foto de Cadastro</span>
                         <div className="h-64 w-64 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
                           {registrationPhotoUrl ? (
-                            <img src={registrationPhotoUrl} alt="Cadastro" className="h-full w-full object-cover" />
+                            <img src={registrationPhotoUrl} alt="Cadastro" className="h-full w-full object-cover" onError={(e) => {
+                              console.error('Failed to load reg image from URL:', registrationPhotoUrl);
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
+                              e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', '<span class="text-xs text-red-500 mt-2 text-center p-2">Erro ao carregar imagem</span>');
+                            }} />
                           ) : (
                             <User className="h-24 w-24 text-gray-300" />
                           )}
@@ -242,9 +257,17 @@ export default function AuditoriaPresencas() {
                         <span className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4">Foto da Presença</span>
                         <div className="h-64 w-64 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
                           {attendancePhotoUrl ? (
-                            <img src={attendancePhotoUrl} alt="Presença" className="h-full w-full object-cover" />
+                            <img src={attendancePhotoUrl} alt="Presença" className="h-full w-full object-cover" onError={(e) => {
+                              console.error('Failed to load image from URL:', attendancePhotoUrl);
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
+                              e.currentTarget.parentElement?.insertAdjacentHTML('beforeend', '<span class="text-xs text-red-500 mt-2 text-center p-2">Erro ao carregar imagem</span>');
+                            }} />
                           ) : (
-                            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                            <span className="text-gray-400 text-sm font-medium flex flex-col items-center">
+                              <User className="h-12 w-12 text-gray-300 mb-2" />
+                              Sem Foto
+                            </span>
                           )}
                         </div>
                         <div className="mt-6 text-center bg-gray-50 p-4 rounded-lg w-full">

@@ -21,6 +21,7 @@ export default function PresencaPage() {
     setTimeout(() => setToast(null), 3000);
   };
   const [savedRecords, setSavedRecords] = useState<Record<string, boolean>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [actionMenuFuncId, setActionMenuFuncId] = useState<string | null>(null);
   const [funcToDelete, setFuncToDelete] = useState<string | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -86,6 +87,20 @@ export default function PresencaPage() {
 
       setPresencas(presencasMap);
       setSavedRecords(newSavedRecords);
+      
+      // Load signed URLs for photos
+      const newPhotoUrls: Record<string, string> = {};
+      await Promise.all(funcs.map(async (f) => {
+         if (f.photo_path) {
+            try {
+               const url = await api.getPhotoUrl('employee-photos', f.photo_path);
+               newPhotoUrls[f.id] = url;
+            } catch (err) {
+               console.error(`Erro ao carregar foto do funcionario ${f.id}`, err);
+            }
+         }
+      }));
+      setPhotoUrls(newPhotoUrls);
     } catch (error) {
       // Ignore presence load error, initialize with false
       const presencasMap: Record<string, boolean> = {};
@@ -414,10 +429,10 @@ export default function PresencaPage() {
                     >
                       <div className="flex items-center w-full">
                         <div className="flex-shrink-0 mr-4 h-16 w-16 bg-gray-100 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center">
-                          {f.photo_path ? (
-                            <img src={f.photo_path} alt={f.nome} className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                          {photoUrls[f.id] ? (
+                            <img src={photoUrls[f.id]} alt={f.nome} className="h-full w-full object-cover" onError={(e) => { console.error('Failed to load image on Presenca card:', photoUrls[f.id]); e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
                           ) : null}
-                          <User className={`h-8 w-8 text-gray-300 ${f.photo_path ? 'hidden' : ''}`} />
+                          <User className={`h-8 w-8 text-gray-300 ${photoUrls[f.id] ? 'hidden' : ''}`} />
                         </div>
                         <div className="flex-1 min-w-0 pr-4">
                           <p className="text-lg font-bold text-gray-900 truncate">{f.nome}</p>

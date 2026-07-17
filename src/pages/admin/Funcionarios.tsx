@@ -57,8 +57,8 @@ export default function Funcionarios() {
       }
 
       if (foto && fId) {
-        const url = await api.uploadEmployeePhoto(foto, fId);
-        await api.updateFuncionario(fId, { photo_path: url });
+        const path = await api.uploadEmployeePhoto(foto, fId);
+        await api.updateFuncionario(fId, { photo_path: path });
       }
 
       setNome('');

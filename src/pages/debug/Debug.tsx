@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import logo from '../../assets/logo.png';
+
 
 declare const __BUILD_VERSION__: string;
 
@@ -52,14 +52,14 @@ export default function Debug() {
         <div>
           <strong className="text-gray-600 block mb-1">Current Logo Asset Path:</strong>
           <code className="bg-gray-100 px-2 py-1 rounded text-orange-600 break-all">
-            {logo}
+            {"/logo.png"}
           </code>
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-100">
           <strong className="text-gray-600 block mb-3">Logo Render Test:</strong>
           <div className="bg-gray-50 p-4 rounded-lg inline-block border border-gray-200">
-            <img src={logo} alt="Rendered Logo Test" className="h-24 w-24 object-contain" />
+            <img src="/logo.png" alt="Rendered Logo Test" className="h-24 w-24 object-contain" />
           </div>
         </div>
         

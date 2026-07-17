@@ -2,7 +2,6 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -16,39 +15,40 @@ import Funcionarios from './pages/admin/Funcionarios';
 import Relatorios from './pages/admin/Relatorios';
 import AuditoriaPresencas from './pages/admin/AuditoriaPresencas';
 import PresencaPage from './pages/operador/Presenca';
-import { PwaUpdateModal } from './components/PwaUpdateModal';
+
+import { AppUpdater } from './components/AppUpdater';
 import Debug from './pages/debug/Debug';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <PwaUpdateModal />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="obras" element={<Obras />} />
-            <Route path="funcoes" element={<Funcoes />} />
-            <Route path="funcionarios" element={<Funcionarios />} />
-            <Route path="presenca" element={<PresencaPage />} />
-            <Route path="relatorios" element={<Relatorios />} />
-            <Route path="auditoria" element={<AuditoriaPresencas />} />
-          </Route>
+        <AppUpdater>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="obras" element={<Obras />} />
+              <Route path="funcoes" element={<Funcoes />} />
+              <Route path="funcionarios" element={<Funcionarios />} />
+              <Route path="presenca" element={<PresencaPage />} />
+              <Route path="relatorios" element={<Relatorios />} />
+              <Route path="auditoria" element={<AuditoriaPresencas />} />
+            </Route>
 
-          {/* Operator Routes */}
-          <Route path="/operador" element={<OperadorLayout />}>
-            <Route index element={<Navigate to="/operador/presenca" replace />} />
-            <Route path="presenca" element={<PresencaPage />} />
-          </Route>
-          
-          <Route path="/debug" element={<Debug />} />
-
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+            {/* Operator Routes */}
+            <Route path="/operador" element={<OperadorLayout />}>
+              <Route index element={<Navigate to="/operador/presenca" replace />} />
+              <Route path="presenca" element={<PresencaPage />} />
+            </Route>
+            
+            <Route path="/debug" element={<Debug />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </AppUpdater>
       </AuthProvider>
     </BrowserRouter>
   );
