@@ -1,9 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
 import { Funcionario, Presenca } from '../../lib/types';
-import { Search, Loader2, Camera, Calendar, Clock, User, CheckCircle2 } from 'lucide-react';
+import { Search, Loader2, Camera, Calendar, Clock, User, CheckCircle2, ChevronDown } from 'lucide-react';
 
 export default function AuditoriaPresencas() {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [filteredFuncionarios, setFilteredFuncionarios] = useState<Funcionario[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,8 +36,12 @@ export default function AuditoriaPresencas() {
   async function loadFuncionarios() {
     try {
       const data = await api.getFuncionarios('todos');
-      setFuncionarios(data);
-      setFilteredFuncionarios(data);
+      const activeSorted = data
+        .filter(f => f.ativo)
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+      
+      setFuncionarios(activeSorted);
+      setFilteredFuncionarios(activeSorted);
     } catch (err) {
       console.error(err);
     } finally {
@@ -34,11 +50,15 @@ export default function AuditoriaPresencas() {
   }
 
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    setFilteredFuncionarios(
-      funcionarios.filter(f => f.nome.toLowerCase().includes(term))
-    );
-  }, [searchTerm, funcionarios]);
+    if (selectedFuncionario && searchTerm === selectedFuncionario.nome) {
+      setFilteredFuncionarios(funcionarios);
+    } else {
+      const term = searchTerm.toLowerCase();
+      setFilteredFuncionarios(
+        funcionarios.filter(f => f.nome.toLowerCase().includes(term))
+      );
+    }
+  }, [searchTerm, funcionarios, selectedFuncionario]);
 
   async function handleSelectFuncionario(f: Funcionario) {
     setSelectedFuncionario(f);
@@ -97,18 +117,24 @@ export default function AuditoriaPresencas() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative z-20">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Buscar Funcionário</label>
-        <div className="relative">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Selecionar Funcionário</label>
+        <div className="relative" ref={dropdownRef}>
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50"
-            placeholder="Digite o nome do funcionário..."
+            className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-50 transition-colors shadow-sm cursor-text"
+            placeholder="Selecione um funcionário..."
             value={searchTerm}
+            onClick={() => setIsDropdownOpen(true)}
+            onFocus={(e) => {
+              e.target.select();
+              setIsDropdownOpen(true);
+            }}
             onChange={(e) => {
               setSearchTerm(e.target.value);
+              setIsDropdownOpen(true);
               if (selectedFuncionario && e.target.value !== selectedFuncionario.nome) {
                 setSelectedFuncionario(null);
                 setPresencas([]);
@@ -116,24 +142,40 @@ export default function AuditoriaPresencas() {
               }
             }}
           />
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          </div>
           
-          {searchTerm && !selectedFuncionario && (
-            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
+          {isDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-full bg-white shadow-xl rounded-xl border border-gray-100 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
               {filteredFuncionarios.length > 0 ? (
-                <ul className="py-1">
+                <ul className="py-2 divide-y divide-gray-50">
                   {filteredFuncionarios.map(f => (
                     <li
                       key={f.id}
-                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700"
-                      onClick={() => handleSelectFuncionario(f)}
+                      className="px-4 py-3 hover:bg-blue-50 cursor-pointer flex items-center justify-between transition-colors group"
+                      onClick={() => {
+                        handleSelectFuncionario(f);
+                        setIsDropdownOpen(false);
+                      }}
                     >
-                      {f.nome}
-                      <span className="ml-2 text-xs text-gray-400">({f.obra?.nome})</span>
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
+                           <User className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">{f.nome}</span>
+                      </div>
+                      <span className="ml-2 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-md group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                        {f.obra?.nome || 'Sem obra'}
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="px-4 py-3 text-sm text-gray-500">Nenhum funcionário encontrado.</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-500 flex flex-col items-center">
+                  <User className="h-8 w-8 text-gray-300 mb-2" />
+                  Nenhum funcionário encontrado.
+                </div>
               )}
             </div>
           )}
