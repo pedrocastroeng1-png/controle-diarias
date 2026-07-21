@@ -74,8 +74,37 @@ export default function AuditoriaPresencas() {
         setRegistrationPhotoUrl(url);
       }
       
-      const history = await api.getAuditoriaPresencas(f.id);
-      setPresencas(history);
+      const [history, atestados] = await Promise.all([
+        api.getAuditoriaPresencas(f.id),
+        api.getAtestados()
+      ]);
+      
+      const atestadosForFunc = atestados.filter(a => a.employee_id === f.id);
+      const generatedAtestados: any[] = [];
+      const dataLimite = new Date();
+      dataLimite.setDate(dataLimite.getDate() - 15);
+      const dataLimiteStr = dataLimite.toISOString().split('T')[0];
+      
+      atestadosForFunc.forEach(a => {
+        let curr = new Date(a.start_date);
+        let end = new Date(a.end_date);
+        while (curr <= end) {
+          const dateStr = curr.toISOString().split('T')[0];
+          if (dateStr >= dataLimiteStr) {
+            generatedAtestados.push({
+              id: `atestado-${a.id}-${dateStr}`,
+              data: dateStr,
+              photo_path: a.photo_path,
+              photo_bucket: 'medical-certificates', // Custom property to identify bucket
+              is_atestado: true
+            });
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+      });
+      
+      const merged = [...history, ...generatedAtestados].sort((a, b) => b.data.localeCompare(a.data));
+      setPresencas(merged);
     } catch (err) {
       console.error('Erro ao carregar auditoria', err);
     } finally {
@@ -93,8 +122,9 @@ export default function AuditoriaPresencas() {
     
     try {
       if (presenca.photo_path) {
-         console.log('Generating signed URL for attendance-photos:', presenca.photo_path);
-         const url = await api.getPhotoUrl('attendance-photos', presenca.photo_path);
+         const bucket = (presenca as any).is_atestado ? 'medical-certificates' : 'attendance-photos';
+         console.log(`Generating signed URL for ${bucket}:`, presenca.photo_path);
+         const url = await api.getPhotoUrl(bucket, presenca.photo_path);
          console.log('Generated Signed URL:', url);
          setAttendancePhotoUrl(url);
       } else {
@@ -237,8 +267,7 @@ export default function AuditoriaPresencas() {
                                 <Calendar className="w-4 h-4 mr-1 text-gray-400" /> {dia}/{mes}/{ano}
                               </p>
                               <p className="text-xs text-gray-500 mt-1 flex items-center">
-                                {/* Simulated Operator logic since operator isn't explicitly in the schema */}
-                                Operador Registrou
+                                {(p as any).is_atestado ? 'Atestado Médico (Administrador)' : 'Operador Registrou'}
                               </p>
                             </div>
                           </div>
@@ -296,7 +325,7 @@ export default function AuditoriaPresencas() {
                       
                       {/* Attendance Photo */}
                       <div className="flex flex-col items-center">
-                        <span className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4">Foto da Presença</span>
+                        <span className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4">{(selectedPresenca as any)?.is_atestado ? "Atestado Médico" : "Foto da Presença"}</span>
                         <div className="h-64 w-64 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
                           {attendancePhotoUrl ? (
                             <img src={attendancePhotoUrl} alt="Presença" className="h-full w-full object-cover" onError={(e) => {

@@ -42,6 +42,20 @@ export interface Presenca {
   funcionario?: Funcionario;
 }
 
+export interface AtestadoMedico {
+  id: string;
+  employee_id: string;
+  start_date: string;
+  days: number;
+  end_date: string;
+  description?: string;
+  photo_path?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  funcionario?: Funcionario;
+}
+
 export interface RelatorioPresenca {
   id: string;
   data: string;
@@ -50,4 +64,34 @@ export interface RelatorioPresenca {
   funcao: string;
   valor_diaria: number;
   obra: string;
+}
+
+
+export type TargetAudience = 'ALL' | 'SPECIFIC';
+export type Priority = 'NORMAL' | 'MANDATORY';
+export type CommunicationType = 'INFO' | 'ATTENTION' | 'URGENT' | 'EMPLOYEE' | 'WORKSITE' | 'MATERIAL' | 'MEDICAL_CERTIFICATE';
+
+export interface Communication {
+  id: string;
+  title: string;
+  message: string;
+  type: CommunicationType;
+  priority: Priority;
+  expiration_date?: string;
+  target_audience: TargetAudience;
+  target_operator_id?: string;
+  created_by?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  creator?: Usuario;
+  target_operator?: Usuario;
+}
+
+export interface CommunicationRead {
+  id: string;
+  communication_id: string;
+  operator_id: string;
+  read_at: string;
+  operator?: Usuario;
 }

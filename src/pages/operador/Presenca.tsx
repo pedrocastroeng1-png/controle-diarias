@@ -9,6 +9,11 @@ export default function PresencaPage() {
   const { usuario } = useAuth();
   const isAdmin = usuario?.perfil === 'ADMIN';
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [unreadComms, setUnreadComms] = useState<any[]>([]);
+  const [currentCommIndex, setCurrentCommIndex] = useState(0);
+  const [commsFinished, setCommsFinished] = useState(false);
+  const [readingComms, setReadingComms] = useState(true);
+  const [atestadosAtivos, setAtestadosAtivos] = useState<Record<string, any>>({});
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,7 +64,33 @@ export default function PresencaPage() {
     }
 
     try {
-      const presencasData = await api.getPresencas(selectedDate);
+      
+      // Check communications if operator
+      if (!isAdmin) {
+         try {
+           const comms = await api.getUnreadMandatoryCommunications(usuario.id);
+           if (comms && comms.length > 0) {
+             setUnreadComms(comms);
+             setReadingComms(true);
+           } else {
+             setReadingComms(false);
+           }
+         } catch (e) {
+           console.error("Error loading communications", e);
+           setReadingComms(false); // Fallback
+         }
+      } else {
+         setReadingComms(false);
+      }
+
+      const [presencasData, atestados] = await Promise.all([
+
+        api.getPresencas(selectedDate),
+        api.getActiveAtestadosForDate(selectedDate)
+      ]);
+      const atestadosMap: Record<string, any> = {};
+      atestados.forEach((a: any) => atestadosMap[a.employee_id] = a);
+      setAtestadosAtivos(atestadosMap);
       
       if (presencasData.length > 0) {
         setJaRegistradoHoje(!isAdmin);
@@ -250,7 +281,7 @@ export default function PresencaPage() {
       const now = new Date().toISOString();
       const userId = usuario?.id || null;
       
-      const registrosToSave = await Promise.all(funcionarios.map(async (f) => {
+      const registrosToSave = await Promise.all(funcionarios.filter(f => !atestadosAtivos[f.id]).map(async (f) => {
         let photo_path = undefined;
         let photo_taken_at = undefined;
         let photo_taken_by = undefined;
@@ -301,7 +332,7 @@ export default function PresencaPage() {
       const sortedFuncionarios = [...funcionarios].sort((a, b) => a.nome.localeCompare(b.nome));
 
       sortedFuncionarios.forEach(f => {
-        if (presencas[f.id]) {
+        if (presencas[f.id] || atestadosAtivos[f.id]) {
           presentes.push(f.nome);
           totalPresentes++;
         } else {
@@ -415,6 +446,27 @@ export default function PresencaPage() {
                   const statusBadge = isPresent 
                     ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">🟢 Presente</span>
                     : <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">🔴 Falta</span>;
+
+                  
+                  if (atestadosAtivos[f.id]) {
+                    return (
+                      <div key={f.id} className="flex flex-col sm:flex-row items-start sm:items-center p-5 rounded-2xl text-left w-full transition-all border bg-blue-50 border-blue-200 shadow-sm opacity-90 relative overflow-hidden">
+                        <div className="flex items-center w-full">
+                          <div className="flex-shrink-0 mr-4 h-16 w-16 bg-blue-100 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center">
+                            <span className="text-2xl">🩺</span>
+                          </div>
+                          <div className="flex-1 min-w-0 pr-4">
+                            <p className="text-lg font-bold text-gray-900 truncate">{f.nome}</p>
+                            <p className="text-sm font-medium text-gray-500 truncate">{f.funcao?.nome || 'Função não definida'}</p>
+                            <p className="text-xs font-bold text-blue-700 mt-1">🩺 ATESTADO MÉDICO ({format(parseISO(atestadosAtivos[f.id].start_date), 'dd/MM/yyyy')} até {format(parseISO(atestadosAtivos[f.id].end_date), 'dd/MM/yyyy')})</p>
+                          </div>
+                          <div className="flex-shrink-0">
+                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-200 text-blue-800">🔒 Presença Bloqueada</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return (
                     <button 

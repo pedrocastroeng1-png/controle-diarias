@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck, Camera } from 'lucide-react';
+import { Megaphone, LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck, Camera, Stethoscope } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 import { version } from '../../config/appVersion';
@@ -25,6 +25,8 @@ export function AdminLayout() {
     { name: 'Funcionários', path: '/admin/funcionarios', icon: Users },
     { name: 'Presença', path: '/admin/presenca', icon: ClipboardCheck },
     { name: 'Relatórios', path: '/admin/relatorios', icon: FileText },
+    { name: 'Atestados', path: '/admin/atestados', icon: Stethoscope },
+    { name: 'Comunicações', path: '/admin/comunicacoes', icon: Megaphone },
     { name: 'Auditoria de Presenças', path: '/admin/auditoria', icon: Camera },
   ];
 

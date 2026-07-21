@@ -13,6 +13,8 @@ import Obras from './pages/admin/Obras';
 import Funcoes from './pages/admin/Funcoes';
 import Funcionarios from './pages/admin/Funcionarios';
 import Relatorios from './pages/admin/Relatorios';
+import Atestados from './pages/admin/Atestados';
+import Communications from './pages/admin/Communications';
 import AuditoriaPresencas from './pages/admin/AuditoriaPresencas';
 import PresencaPage from './pages/operador/Presenca';
 
@@ -36,6 +38,8 @@ function App() {
               <Route path="funcionarios" element={<Funcionarios />} />
               <Route path="presenca" element={<PresencaPage />} />
               <Route path="relatorios" element={<Relatorios />} />
+              <Route path="atestados" element={<Atestados />} />
+              <Route path="comunicacoes" element={<Communications />} />
               <Route path="auditoria" element={<AuditoriaPresencas />} />
             </Route>
 

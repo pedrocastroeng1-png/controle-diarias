@@ -39,15 +39,61 @@ export default function Relatorios() {
 
   async function loadRelatorio(inicio: string, fim: string, obra: string) {
     setLoading(true);
+    setErro('');
     try {
-      const data = await api.getRelatorio(
-        inicio || undefined, 
-        fim || undefined, 
-        obra || undefined
-      );
-      setRelatorio(data);
-    } catch (error) {
-      setErro('Ocorreu um erro ao carregar o relatório.');
+      const [data, atestados, funcionarios] = await Promise.all([
+        api.getRelatorio(inicio, fim, obra),
+        api.getAtestados(), // Fetch all or we could create a date-filtered one
+        api.getFuncionarios('todos')
+      ]);
+      
+      const funcionariosMap = new Map(funcionarios.map(f => [f.id, f]));
+      const atestadoRecords = [];
+      
+      // Parse atestados and create simulated records
+      atestados.forEach(atestado => {
+        const start = parseISO(atestado.start_date);
+        const end = parseISO(atestado.end_date);
+        let curr = start;
+        
+        while (curr <= end) {
+          const dateStr = format(curr, 'yyyy-MM-dd');
+          
+          // Only include if it falls within the requested range
+          if ((!inicio || dateStr >= inicio) && (!fim || dateStr <= fim)) {
+            const func = funcionariosMap.get(atestado.employee_id);
+            if (func) {
+              // Check if obra matches
+              if (!obra || func.obra?.nome === obra) {
+                atestadoRecords.push({
+                  id: `atestado-${atestado.id}-${dateStr}`,
+                  data: dateStr,
+                  status: 'ATESTADO MÉDICO',
+                  funcionario: func.nome,
+                  funcao: func.funcao?.nome || '',
+                  valor_diaria: func.funcao?.valor_diaria || 0,
+                  obra: func.obra?.nome || '',
+                  atestado_original_id: atestado.id,
+                  atestado_description: atestado.description,
+                  atestado_photo_path: atestado.photo_path
+                });
+              }
+            }
+          }
+          curr = new Date(curr.getTime() + 86400000); // add one day
+        }
+      });
+      
+      // Merge and sort
+      const merged = [...data, ...atestadoRecords].sort((a, b) => {
+        if (a.data > b.data) return -1;
+        if (a.data < b.data) return 1;
+        return a.funcionario.localeCompare(b.funcionario);
+      });
+      
+      setRelatorio(merged);
+    } catch (e) {
+      setErro('Ocorreu um erro ao gerar o relatório.');
     } finally {
       setLoading(false);
     }
@@ -76,7 +122,7 @@ export default function Relatorios() {
             total: 0
           };
         }
-        if (p.status === 'PRESENTE') {
+        if (p.status === 'PRESENTE' || p.status === 'ATESTADO MÉDICO') {
           agrupado[fId].dias += 1;
           agrupado[fId].total += agrupado[fId].valorDiaria;
         } else if (p.status === 'FALTOU') {
@@ -291,7 +337,7 @@ export default function Relatorios() {
       
       relatorioOrdenado.forEach((p) => {
         const funcName = p.funcionario_nome || p.funcionario || '';
-        const isPresente = p.status === 'PRESENTE';
+        const isPresente = p.status === 'PRESENTE' || p.status === 'ATESTADO MÉDICO';
         wsBD.addRow({
           helper: '', 
           funcionario: funcName,
@@ -299,7 +345,7 @@ export default function Relatorios() {
           obra: p.obra_nome || p.obra || '',
           valor: p.valor_diaria || p.valorDiaria || 0,
           data: p.data ? format(parseISO(p.data), 'dd/MM/yyyy') : '',
-          status: isPresente ? '✔ Presente' : '✘ Faltou'
+          status: p.status === 'ATESTADO MÉDICO' ? '🩺 Atestado Médico' : (p.status === 'PRESENTE' ? '✔ Presente' : '✘ Faltou')
         });
       });
       
