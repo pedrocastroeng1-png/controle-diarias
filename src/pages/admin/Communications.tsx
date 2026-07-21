@@ -69,7 +69,7 @@ export default function Communications() {
       
       // Check if locked
       try {
-        const reads = await api.getCommunicationReads(comm.id);
+        const reads = await api.getCommunicationRecipients(comm.id);
         setIsLocked(reads.length > 0);
       } catch(e) {
         setIsLocked(false);
@@ -146,7 +146,7 @@ export default function Communications() {
     setLoadingReads(true);
     setCurrentCommReads([]);
     try {
-      const reads = await api.getCommunicationReads(comm.id);
+      const reads = await api.getCommunicationRecipients(comm.id);
       setCurrentCommReads(reads);
     } catch (err) {
       console.error(err);

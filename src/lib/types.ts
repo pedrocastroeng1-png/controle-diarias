@@ -88,7 +88,7 @@ export interface Communication {
   target_operator?: Usuario;
 }
 
-export interface CommunicationRead {
+export interface CommunicationRecipient {
   id: string;
   communication_id: string;
   operator_id: string;

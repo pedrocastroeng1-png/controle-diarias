@@ -41,7 +41,7 @@ export const api = {
     
     // Now check which ones have been read
     const { data: reads, error: readsError } = await supabase
-      .from('communication_reads')
+      .from('communication_recipients')
       .select('communication_id')
       .eq('operator_id', operatorId)
       .in('communication_id', validComms.map(c => c.id));
@@ -52,10 +52,10 @@ export const api = {
     return validComms.filter(c => !readIds.has(c.id)).sort((a, b) => a.created_at.localeCompare(b.created_at));
   },
   
-  getCommunicationReads: async (communicationId: string): Promise<any[]> => {
+  getCommunicationRecipients: async (communicationId: string): Promise<any[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
     const { data, error } = await supabase
-      .from('communication_reads')
+      .from('communication_recipients')
       .select('*, operator:usuarios!operator_id(id, usuario)')
       .eq('communication_id', communicationId)
       .order('read_at', { ascending: false });
@@ -98,7 +98,7 @@ export const api = {
   markCommunicationAsRead: async (communicationId: string, operatorId: string): Promise<void> => {
     if (!supabase) throw new Error('Supabase não configurado');
     const { error } = await supabase
-      .from('communication_reads')
+      .from('communication_recipients')
       .insert([{ communication_id: communicationId, operator_id: operatorId }]);
     if (error) throw error;
   },
