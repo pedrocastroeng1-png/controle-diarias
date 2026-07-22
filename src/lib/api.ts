@@ -18,7 +18,8 @@ export const api = {
 
   getUnreadCommunications: async (operatorId: string): Promise<any[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     
     // Get all mandatory communications that are active, not expired, and target this operator or ALL
     const { data: comms, error: commsError } = await supabase
