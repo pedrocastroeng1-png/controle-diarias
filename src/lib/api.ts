@@ -16,16 +16,15 @@ export const api = {
     return data || [];
   },
 
-  getUnreadMandatoryCommunications: async (operatorId: string): Promise<any[]> => {
+  getUnreadCommunications: async (operatorId: string): Promise<any[]> => {
     if (!supabase) throw new Error('Supabase não configurado');
     const today = new Date().toISOString().split('T')[0];
     
     // Get all mandatory communications that are active, not expired, and target this operator or ALL
     const { data: comms, error: commsError } = await supabase
       .from('communications')
-      .select('*, creator:usuarios!created_by(id, usuario)')
-      .eq('is_active', true)
-      .eq('priority', 'MANDATORY');
+      .select('*, creator:usuarios!created_by(id, usuario), attachments:communication_attachments(*)')
+      .eq('is_active', true);
       
     if (commsError) throw commsError;
     
@@ -61,6 +60,31 @@ export const api = {
       .order('read_at', { ascending: false });
     if (error) throw error;
     return data || [];
+  },
+
+  
+  markCommunicationRead: async (communicationId: string, operatorId: string): Promise<void> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { error } = await supabase
+      .from('communication_recipients')
+      .upsert({
+        communication_id: communicationId,
+        operator_id: operatorId,
+        read_at: new Date().toISOString()
+      }, { onConflict: 'communication_id, operator_id' });
+    if (error) throw error;
+  },
+
+  
+  createCommunicationAttachment: async (payload: any): Promise<any> => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    const { data, error } = await supabase
+      .from('communication_attachments')
+      .insert([payload])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   createCommunication: async (payload: any): Promise<any> => {
@@ -304,7 +328,7 @@ export const api = {
     const fileName = `${prefix}_${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(fileName, file, { upsert: true });
+      .upload(fileName, file, { upsert: false, contentType: file.type || 'application/octet-stream' });
     
     if (error) {
        console.error("Storage upload error:", error);
@@ -319,7 +343,7 @@ export const api = {
     const fileName = `${employeeId}_${Date.now()}.${fileExt}`;
     const { data, error } = await supabase.storage
       .from('employee-photos')
-      .upload(fileName, file, { upsert: true });
+      .upload(fileName, file, { upsert: false, contentType: file.type || 'application/octet-stream' });
 
     if (error) {
        console.error("Storage upload error:", error);
@@ -393,12 +417,39 @@ export const api = {
       }
     });
 
+
+    // Communication stats
+    const { data: communications } = await supabase.from('communications').select('id, target_audience, target_operator_id');
+    const { data: recipients } = await supabase.from('communication_recipients').select('communication_id, operator_id, read_at');
+    const { data: operators } = await supabase.from('usuarios').select('id').eq('perfil', 'OPERADOR');
+    
+    let totalComms = communications?.length || 0;
+    let readComms = recipients?.filter(r => r.read_at)?.length || 0;
+    let totalExpectedReads = 0;
+    
+    const numOperators = operators?.length || 0;
+    
+    if (communications) {
+      communications.forEach(c => {
+        if (c.target_audience === 'ALL') {
+          totalExpectedReads += numOperators;
+        } else {
+          totalExpectedReads += 1;
+        }
+      });
+    }
+    
+    const unreadComms = totalExpectedReads - readComms;
+
     return {
       totalObras: obrasCount || 0,
       totalFuncionarios: funcionariosCount || 0,
       presentesHoje,
       faltasHoje,
-      valorTotalHoje
+      valorTotalHoje,
+      totalComms,
+      readComms,
+      unreadComms
     };
   },
 

@@ -15,6 +15,8 @@ export default function Communications() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false); // Locked if someone has read it
   
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     title: '',
     message: '',
@@ -89,6 +91,7 @@ export default function Communications() {
         is_active: true
       });
     }
+    setSelectedFiles([]);
     setModalOpen(true);
   };
 
@@ -97,6 +100,7 @@ export default function Communications() {
     if (!form.title || !form.message) return;
     
     setSaving(true);
+    setUploading(true);
     try {
       const payload = {
         title: form.title,
@@ -110,6 +114,8 @@ export default function Communications() {
         created_by: usuario?.id
       };
 
+      let commId = editingId;
+
       if (editingId) {
         if (!isLocked) {
            await api.updateCommunication(editingId, payload);
@@ -118,8 +124,27 @@ export default function Communications() {
            await api.updateCommunication(editingId, { is_active: form.is_active });
         }
       } else {
-        await api.createCommunication(payload);
+        const created = await api.createCommunication(payload);
+        commId = created.id;
       }
+
+      // Handle file uploads
+      if (selectedFiles.length > 0 && commId) {
+        for (const file of selectedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `comm_${commId}_${Date.now()}.${fileExt}`;
+          
+          const filePath = await api.uploadPhoto('communication-files', file, fileName);
+          
+          await api.createCommunicationAttachment({
+            communication_id: commId,
+            file_name: file.name,
+            file_path: filePath,
+            file_type: file.type || 'application/octet-stream'
+          });
+        }
+      }
+
       setModalOpen(false);
       loadData();
     } catch (err) {
@@ -127,6 +152,7 @@ export default function Communications() {
       alert('Erro ao salvar comunicação. ' + (err as any).message);
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
@@ -350,7 +376,8 @@ export default function Communications() {
                           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-100"
                         >
                           <option value="NORMAL">Normal</option>
-                          <option value="MANDATORY">Obrigatória (Bloqueia Presença)</option>
+                          <option value="IMPORTANT">Importante</option>
+                          <option value="URGENT">Urgente</option>
                         </select>
                       </div>
 
@@ -409,7 +436,26 @@ export default function Communications() {
                       />
                     </div>
                     
-                    <div className="flex items-center mt-4">
+                    
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Anexos (Opcional - Imagens ou PDF)</label>
+                        <input
+                          type="file"
+                          multiple
+                          disabled={isLocked}
+                          accept="image/*,application/pdf"
+                          onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                        />
+                        {selectedFiles.length > 0 && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            {selectedFiles.length} arquivo(s) selecionado(s)
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center mt-4">
+
                       <input
                         id="is_active"
                         type="checkbox"

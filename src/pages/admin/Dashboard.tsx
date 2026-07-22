@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
-import { HardHat, Users, CheckCircle, XCircle, DollarSign, ArrowRight, Activity, Calendar } from 'lucide-react';
+import { HardHat, Users, CheckCircle, XCircle, DollarSign, ArrowRight, Activity, Calendar, Megaphone, CheckCircle2, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -10,6 +10,9 @@ export default function Dashboard() {
   const [presentesHoje, setPresentesHoje] = useState(0);
   const [faltasHoje, setFaltasHoje] = useState(0);
   const [valorTotalHoje, setValorTotalHoje] = useState(0);
+  const [totalComms, setTotalComms] = useState(0);
+  const [readComms, setReadComms] = useState(0);
+  const [unreadComms, setUnreadComms] = useState(0);
   const [erro, setErro] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -28,6 +31,9 @@ export default function Dashboard() {
         setPresentesHoje(stats.presentesHoje);
         setFaltasHoje(stats.faltasHoje);
         setValorTotalHoje(stats.valorTotalHoje);
+        setTotalComms(stats.totalComms);
+        setReadComms(stats.readComms);
+        setUnreadComms(stats.unreadComms);
       } catch (error) {
         setErro('Ocorreu um erro ao carregar os dados.');
       } finally {

@@ -68,7 +68,7 @@ export interface RelatorioPresenca {
 
 
 export type TargetAudience = 'ALL' | 'SPECIFIC';
-export type Priority = 'NORMAL' | 'MANDATORY';
+export type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT' | 'MANDATORY';
 export type CommunicationType = 'INFO' | 'ATTENTION' | 'URGENT' | 'EMPLOYEE' | 'WORKSITE' | 'MATERIAL' | 'MEDICAL_CERTIFICATE';
 
 export interface Communication {
@@ -86,6 +86,7 @@ export interface Communication {
   updated_at: string;
   creator?: Usuario;
   target_operator?: Usuario;
+  attachments?: CommunicationAttachment[];
 }
 
 export interface CommunicationRecipient {
@@ -94,4 +95,13 @@ export interface CommunicationRecipient {
   operator_id: string;
   read_at: string;
   operator?: Usuario;
+}
+
+export interface CommunicationAttachment {
+  id: string;
+  communication_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  created_at: string;
 }

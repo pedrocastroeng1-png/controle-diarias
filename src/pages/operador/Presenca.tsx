@@ -9,11 +9,7 @@ export default function PresencaPage() {
   const { usuario } = useAuth();
   const isAdmin = usuario?.perfil === 'ADMIN';
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
-  const [unreadComms, setUnreadComms] = useState<any[]>([]);
-  const [currentCommIndex, setCurrentCommIndex] = useState(0);
-  const [commsFinished, setCommsFinished] = useState(false);
-  const [readingComms, setReadingComms] = useState(true);
-  const [atestadosAtivos, setAtestadosAtivos] = useState<Record<string, any>>({});
+          const [atestadosAtivos, setAtestadosAtivos] = useState<Record<string, any>>({});
   const [presencas, setPresencas] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,26 +59,9 @@ export default function PresencaPage() {
       return;
     }
 
-    try {
-      
-      // Check communications if operator
-      if (!isAdmin) {
-         try {
-           const comms = await api.getUnreadMandatoryCommunications(usuario.id);
-           if (comms && comms.length > 0) {
-             setUnreadComms(comms);
-             setReadingComms(true);
-           } else {
-             setReadingComms(false);
-           }
-         } catch (e) {
-           console.error("Error loading communications", e);
-           setReadingComms(false); // Fallback
-         }
-      } else {
-         setReadingComms(false);
-      }
+    
 
+      try {
       const [presencasData, atestados] = await Promise.all([
 
         api.getPresencas(selectedDate),

@@ -1,15 +1,15 @@
-import React from 'react';
+const fs = require('fs');
+let code = `import React from 'react';
 
-export class ErrorBoundary extends React.Component {
-  state: any;
-  props: any;
+interface State {
+  hasError: boolean;
+  error: any;
+}
 
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+export class ErrorBoundary extends React.Component<any, State> {
+  state: State = { hasError: false, error: null };
 
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(error: any): State {
     return { hasError: true, error };
   }
 
@@ -29,3 +29,5 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+`;
+fs.writeFileSync('src/components/ErrorBoundary.tsx', code);

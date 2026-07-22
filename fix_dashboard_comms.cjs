@@ -1,42 +1,71 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/pages/admin/Dashboard.tsx', 'utf8');
 
-// We need to fetch active communications
-const loadDataRegex = /const atestados = await api\.getActiveAtestadosForDate\(hoje\);\n\s*setAtestadosAtivos\(atestados\.length\);/;
-const loadDataReplace = `const atestados = await api.getActiveAtestadosForDate(hoje);
-      setAtestadosAtivos(atestados.length);
-      const comms = await api.getCommunications();
-      const activeComms = comms.filter(c => c.is_active);
-      setCommsAtivos(activeComms.length);`;
-
-code = code.replace(loadDataRegex, loadDataReplace);
-
-// State
 code = code.replace(
-  "const [atestadosAtivos, setAtestadosAtivos] = useState(0);",
-  "const [atestadosAtivos, setAtestadosAtivos] = useState(0);\n  const [commsAtivos, setCommsAtivos] = useState(0);"
+  "import { HardHat, Users, CheckCircle, XCircle, DollarSign, ArrowRight, Activity, Calendar } from 'lucide-react';",
+  "import { HardHat, Users, CheckCircle, XCircle, DollarSign, ArrowRight, Activity, Calendar, Megaphone, CheckCircle2, EyeOff } from 'lucide-react';"
 );
 
-// Imports
-if (!code.includes('Megaphone')) {
-  code = code.replace("Stethoscope", "Stethoscope, Megaphone");
-}
+// State vars
+code = code.replace(
+  "const [valorTotalHoje, setValorTotalHoje] = useState(0);",
+  "const [valorTotalHoje, setValorTotalHoje] = useState(0);\n  const [totalComms, setTotalComms] = useState(0);\n  const [readComms, setReadComms] = useState(0);\n  const [unreadComms, setUnreadComms] = useState(0);"
+);
 
-// Widget
-const widgetHtml = `
-        <Link to="/admin/comunicacoes" className="block bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Comunicações Ativas</p>
-              <h3 className="text-3xl font-bold text-gray-900 mt-1">{commsAtivos}</h3>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <Megaphone className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Link>`;
+// set data
+code = code.replace(
+  "setValorTotalHoje(stats.valorTotalHoje);",
+  "setValorTotalHoje(stats.valorTotalHoje);\n        setTotalComms(stats.totalComms);\n        setReadComms(stats.readComms);\n        setUnreadComms(stats.unreadComms);"
+);
 
-code = code.replace(/<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">\n/, 
-  `<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">\n${widgetHtml}\n`);
+// UI cards
+const htmlNew = `
+        <div className="md:col-span-12 lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+           <div className="space-y-6">
+             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Comunicações</h3>
+             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Total Enviadas</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{isLoading ? '...' : totalComms}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-purple-50">
+                    <Megaphone className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+             </div>
+           </div>
+           <div className="space-y-6">
+             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider opacity-0 hidden sm:block">Leituras</h3>
+             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Confirmações de Leitura</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{isLoading ? '...' : readComms}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-green-50">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+             </div>
+           </div>
+           <div className="space-y-6">
+             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider opacity-0 hidden sm:block">Faltam Ler</h3>
+             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Não Lidas</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{isLoading ? '...' : unreadComms}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-yellow-50">
+                    <EyeOff className="h-6 w-6 text-yellow-600" />
+                  </div>
+                </div>
+             </div>
+           </div>
+        </div>
+      </div>
+`;
+code = code.replace("</div>\n            \n      <div className=\"text-center pt-8\">", htmlNew + "\n            \n      <div className=\"text-center pt-8\">");
 
 fs.writeFileSync('src/pages/admin/Dashboard.tsx', code);

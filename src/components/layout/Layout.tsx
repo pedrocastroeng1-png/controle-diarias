@@ -1,4 +1,6 @@
-import React from 'react';
+import { api } from '../../lib/api';
+import { CommunicationViewer } from '../CommunicationViewer';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Megaphone, LayoutDashboard, HardHat, Briefcase, Users, FileText, LogOut, ClipboardCheck, Camera, Stethoscope } from 'lucide-react';
@@ -97,16 +99,41 @@ export function AdminLayout() {
   );
 }
 
+
 export function OperadorLayout() {
   const { usuario, logout } = useAuth();
   const location = useLocation();
+  const [unreadComms, setUnreadComms] = useState<any[]>([]);
+  const [loadingComms, setLoadingComms] = useState(true);
+
+  useEffect(() => {
+    if (usuario && usuario.perfil === 'OPERADOR') {
+      api.getUnreadCommunications(usuario.id).then(comms => {
+        setUnreadComms(comms);
+        setLoadingComms(false);
+      }).catch(err => {
+        console.error(err);
+        setLoadingComms(false);
+      });
+    } else {
+      setLoadingComms(false);
+    }
+  }, [usuario]);
 
   if (!usuario) {
     return <Navigate to="/login" replace />;
   }
-  
+    
   if (usuario.perfil === 'ADMIN' && location.pathname === '/operador') {
      return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (loadingComms) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  }
+
+  if (unreadComms.length > 0) {
+    return <CommunicationViewer communications={unreadComms} onComplete={() => setUnreadComms([])} />;
   }
 
   return (
@@ -144,7 +171,8 @@ export function OperadorLayout() {
           </div>
         </div>
       </header>
-            <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+      
+      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
         <div className="flex-1">
           <Outlet />
         </div>

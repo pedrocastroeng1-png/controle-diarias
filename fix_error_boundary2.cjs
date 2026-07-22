@@ -1,9 +1,7 @@
-import React from 'react';
+const fs = require('fs');
+let code = `import React from 'react';
 
-export class ErrorBoundary extends React.Component {
-  state: any;
-  props: any;
-
+export class ErrorBoundary extends React.Component<any, any> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -29,3 +27,5 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+`;
+fs.writeFileSync('src/components/ErrorBoundary.tsx', code);

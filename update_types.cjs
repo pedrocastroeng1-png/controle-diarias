@@ -1,36 +1,26 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/lib/types.ts', 'utf8');
 
-const newTypes = `
-export type TargetAudience = 'ALL' | 'SPECIFIC';
-export type Priority = 'NORMAL' | 'MANDATORY';
-export type CommunicationType = 'INFO' | 'ATTENTION' | 'URGENT' | 'EMPLOYEE' | 'WORKSITE' | 'MATERIAL' | 'MEDICAL_CERTIFICATE';
+code = code.replace(
+  "export type Priority = 'NORMAL' | 'MANDATORY';",
+  "export type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT' | 'MANDATORY';"
+);
 
-export interface Communication {
-  id: string;
-  title: string;
-  message: string;
-  type: CommunicationType;
-  priority: Priority;
-  expiration_date?: string;
-  target_audience: TargetAudience;
-  target_operator_id?: string;
-  created_by?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  creator?: Usuario;
-  target_operator?: Usuario;
-}
-
-export interface CommunicationRead {
+if (!code.includes('CommunicationAttachment')) {
+  code += `\nexport interface CommunicationAttachment {
   id: string;
   communication_id: string;
-  operator_id: string;
-  read_at: string;
-  operator?: Usuario;
-}
-`;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  created_at: string;
+}\n`;
 
-code = code + '\n' + newTypes;
+  // Update Communication interface to include attachments
+  code = code.replace(
+    "  target_operator?: Usuario;\n}",
+    "  target_operator?: Usuario;\n  attachments?: CommunicationAttachment[];\n}"
+  );
+}
+
 fs.writeFileSync('src/lib/types.ts', code);
