@@ -19,6 +19,7 @@ import AuditoriaPresencas from './pages/admin/AuditoriaPresencas';
 import PresencaPage from './pages/operador/Presenca';
 
 import { AppUpdater } from './components/AppUpdater';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Debug from './pages/debug/Debug';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppUpdater>
+          <ErrorBoundary>
           <Routes>
             <Route path="/login" element={<Login />} />
             
@@ -52,6 +54,7 @@ function App() {
             <Route path="/debug" element={<Debug />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
+          </ErrorBoundary>
         </AppUpdater>
       </AuthProvider>
     </BrowserRouter>

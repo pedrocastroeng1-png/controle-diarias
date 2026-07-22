@@ -1,14 +1,9 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.tsx', 'utf8');
 
-code = code.replace(
-  "import Atestados from './pages/admin/Atestados';",
-  "import Atestados from './pages/admin/Atestados';\nimport Communications from './pages/admin/Communications';"
-);
+code = code.replace("import { AppUpdater } from './components/AppUpdater';", "import { AppUpdater } from './components/AppUpdater';\nimport { ErrorBoundary } from './components/ErrorBoundary';");
 
-code = code.replace(
-  '<Route path="atestados" element={<Atestados />} />',
-  '<Route path="atestados" element={<Atestados />} />\n              <Route path="comunicacoes" element={<Communications />} />'
-);
+code = code.replace("<AppUpdater>", "<AppUpdater>\n          <ErrorBoundary>");
+code = code.replace("</AppUpdater>", "  </ErrorBoundary>\n        </AppUpdater>");
 
 fs.writeFileSync('src/App.tsx', code);
