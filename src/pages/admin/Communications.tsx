@@ -195,7 +195,7 @@ export default function Communications() {
   };
   
   // Dashboard Counters
-  const unreadCount = communications.filter(c => c.is_active && c.priority === 'MANDATORY').length; // Approximation for dashboard
+  const unreadCount = communications.filter(c => c.is_active && c.priority === 'URGENT').length; // Approximation for dashboard
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -227,7 +227,7 @@ export default function Communications() {
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
              <p className="text-sm font-medium text-gray-500">Ativas Obrigatórias</p>
-             <h3 className="text-2xl font-bold text-gray-900 mt-1">{communications.filter(c => c.is_active && c.priority === 'MANDATORY').length}</h3>
+             <h3 className="text-2xl font-bold text-gray-900 mt-1">{communications.filter(c => c.is_active && c.priority === 'URGENT').length}</h3>
           </div>
           <div className="p-3 bg-red-50 rounded-xl"><AlertTriangle className="w-6 h-6 text-red-600" /></div>
         </div>
@@ -244,8 +244,8 @@ export default function Communications() {
               <li key={c.id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-4 mt-1 flex-shrink-0 ${c.priority === 'MANDATORY' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                      <Megaphone className={`h-5 w-5 ${c.priority === 'MANDATORY' ? 'text-red-600' : 'text-blue-600'}`} />
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-4 mt-1 flex-shrink-0 ${c.priority === 'URGENT' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                      <Megaphone className={`h-5 w-5 ${c.priority === 'URGENT' ? 'text-red-600' : 'text-blue-600'}`} />
                     </div>
                     <div>
                       <div className="flex items-center flex-wrap gap-2 mb-1">
@@ -255,7 +255,7 @@ export default function Communications() {
                             Inativa
                           </span>
                         )}
-                        {c.priority === 'MANDATORY' && (
+                        {c.priority === 'URGENT' && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">
                             Obrigatória
                           </span>
@@ -376,7 +376,6 @@ export default function Communications() {
                           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-100"
                         >
                           <option value="NORMAL">Normal</option>
-                          <option value="IMPORTANT">Importante</option>
                           <option value="URGENT">Urgente</option>
                         </select>
                       </div>

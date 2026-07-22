@@ -80,16 +80,12 @@ export function CommunicationViewer({ communications, onComplete }: Props) {
 
   const priorityColors = {
     NORMAL: 'bg-blue-100 text-blue-800 border-blue-200',
-    IMPORTANT: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    URGENT: 'bg-red-100 text-red-800 border-red-200',
-    MANDATORY: 'bg-red-100 text-red-800 border-red-200'
+    URGENT: 'bg-red-100 text-red-800 border-red-200'
   };
 
   const priorityIcons = {
     NORMAL: <Info className="w-5 h-5 mr-1" />,
-    IMPORTANT: <Bell className="w-5 h-5 mr-1" />,
-    URGENT: <AlertTriangle className="w-5 h-5 mr-1" />,
-    MANDATORY: <AlertTriangle className="w-5 h-5 mr-1" />
+    URGENT: <AlertTriangle className="w-5 h-5 mr-1" />
   };
 
   return (
@@ -110,7 +106,7 @@ export function CommunicationViewer({ communications, onComplete }: Props) {
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border ${priorityColors[comm.priority] || priorityColors.NORMAL}`}>
                 {priorityIcons[comm.priority] || priorityIcons.NORMAL}
-                {comm.priority === 'NORMAL' ? 'Normal' : comm.priority === 'IMPORTANT' ? 'Importante' : 'Urgente'}
+                {comm.priority === 'NORMAL' ? 'Normal' : 'Urgente'}
               </span>
               <span className="text-gray-500 text-sm">
                 Enviado em {format(parseISO(comm.created_at), "dd/MM/yyyy 'às' HH:mm")}

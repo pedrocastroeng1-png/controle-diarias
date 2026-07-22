@@ -68,7 +68,7 @@ export interface RelatorioPresenca {
 
 
 export type TargetAudience = 'ALL' | 'SPECIFIC';
-export type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT' | 'MANDATORY';
+export type Priority = 'NORMAL' | 'URGENT';
 export type CommunicationType = 'INFO' | 'ATTENTION' | 'URGENT' | 'EMPLOYEE' | 'WORKSITE' | 'MATERIAL' | 'MEDICAL_CERTIFICATE';
 
 export interface Communication {
